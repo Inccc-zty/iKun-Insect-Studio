@@ -1,42 +1,30 @@
 # iKun Insect Studio · Manual
 
 > For people already shooting insects and editing in Lightroom (or an equivalent).
-> It does three repetitive jobs for you — **find the insect → place the crop → set the exposure** —
-> and writes the result as an `.xmp` that Lightroom reads.
->
 > 中文版：[manual.md](manual.md)
 
 ---
 
-## 0 In one line
+## 0 What it is
 
-**It is not an editor. It is a batch tool that turns repetitive decisions into parameters.**
+**A tool that does the boring, repetitive part for you: find the insect, place the crop, set the exposure.**
 
-After a run, every RAW has a sidecar `.xmp`; Lightroom reads it and the crop, exposure and
-sharpening are already on the sliders. **White balance is left alone** — that depends on what
-you want to say, not on a measurement.
+### Who it is for
 
----
+Every field trip, every individual needs one record frame. Out of a hundred shots a day, a handful
+are portfolio-grade and the rest are **records**. The records still need cropping — in macro work
+the insect is always small in the frame: hand-holding shakes, the magnification is rarely enough,
+and the insect will not let you get closer. Uncroped, the photo is "a bug somewhere in the middle".
 
-## 1 After installing
+So what actually eats your evening is not the five good frames — it is the other ninety-five:
+the same crop, the same exposure nudge, over and over.
 
-1. Unzip to a **fixed folder** (not the Desktop, and do not rename it later), e.g. `D:/iKunInsectStudio`
-2. Double-click `iKunInsectStudio.exe`
-3. First launch loads the models in 10–20 s; **the window appears first and the models load in
-   the background**, so you can drop photos in immediately
-4. To reset: close the app, double-click `重置到初始状态.bat` in the same folder
+**The app does exactly those two things:**
 
-> An NVIDIA GPU (4 GB+) is recommended. It also runs on CPU, at 5–10 s per photo.
+- **Crop** — accurate enough to use as-is
+- **Exposure** — an estimate; treat it as a starting point and pass through Lightroom
 
----
-
-## 2 First batch in five minutes
-
-1. Drop **one folder** onto the window
-2. Mode: `Crop + Exposure`
-3. 「Photos with XMP」 → **protect what I edited**
-4. Press **Start**
-5. In Lightroom: select the batch → right-click → **Read Metadata from File**
+The result is written as a sidecar `.xmp` that Lightroom reads directly.
 
 ![batch](media/panel80.jpg)
 
@@ -44,7 +32,61 @@ Three columns per row: original / boxes and head point / result.
 
 ---
 
-## 3 What it changes, and what it does not
+## 1 The standard workflow
+
+![workflow](media/flow_workflow.en.png)
+
+| Step | Where | What | Output |
+|---|---|---|---|
+| ① Cull | any culling tool | go through by batch; delete soft, shaken, duplicated, blocked | a clean candidate set |
+| ② Pick the keepers | Lightroom | only 5–10%, finished by hand | a few publishable frames |
+| ③ Batch run · **the app** | iKun Insect Studio | drop the rest in, policy = protect what I edited | one `.xmp` per photo |
+| ④ Global fine-tuning · **Lightroom** | Lightroom | white balance, overall exposure, colour, local adjustments — in bulk | one consistent look |
+| ⑤ Export · **Lightroom** | Lightroom | preset → export (size, output sharpening, watermark) | deliverables |
+
+**② and ③ cannot swap**: finish the hand edits first, then let the batch skip them.
+
+> **What to cull with**: Lightroom works, but a dedicated culler is faster — Nikon NX Studio, for
+> instance, is much quicker for browsing and rating. Other makers have their own; use whatever
+> feels right.
+
+### About step ④
+
+**The real fine-tuning happens in Lightroom** — white balance, overall exposure, tone curve, local
+masks. That is where a batch becomes one look, and it is a judgement call, not a measurement.
+The app only puts the crop and the exposure on the sliders.
+
+> White balance is deliberately not written: whether a scene should be cooler or warmer is an
+> expressive choice, not something you measure off the frame.
+
+---
+
+## 2 After installing
+
+1. Unzip to a **fixed folder** (not the Desktop, and do not rename it later), e.g. `D:/iKunInsectStudio`
+2. Double-click `iKunInsectStudio.exe`
+3. First launch loads the models in 10–20 s; **the window appears first and the models load in the
+   background**, so you can queue photos immediately
+4. To reset: close the app, double-click `重置到初始状态.bat` in the same folder
+
+> An NVIDIA GPU (4 GB+) is recommended. CPU works too, at 5–10 s per photo.
+
+---
+
+## 3 First batch in five minutes
+
+1. Drop **a folder**, or **a batch of photos**, onto the window
+2. Mode: `Crop + Exposure`
+3. 「Photos with XMP」 → **protect what I edited**
+4. Press **Start**
+5. **Import the batch into Lightroom** — the `.xmp` is read on import and the crop and exposure land on the sliders
+
+> Only if these photos are **already in LR** do you need one extra click: select all → right-click →
+> **Read Metadata from File**.
+
+---
+
+## 4 What it changes, and what it does not
 
 | | |
 |---|---|
@@ -60,7 +102,7 @@ Where the three numbers come from:
 
 ---
 
-## 4 How it plugs into Lightroom
+## 5 How it plugs into Lightroom
 
 ![with LR](media/flow_lr.en.png)
 
@@ -68,35 +110,10 @@ Two cases, one action differs:
 
 | Your situation | What to do |
 |---|---|
-| Photos **already in** LR | after the run: select them in LR → right-click → **Read Metadata from File** |
-| Photos **not imported yet** | run the app first, then import into LR — **the XMP is read on import** |
+| **New import** | just import into LR — **the `.xmp` is read on import**, nothing else to click |
+| The batch is **already in** LR | after the run: select all → right-click → **Read Metadata from File** |
 
 **The RAW is never modified**, so either order is safe.
-
----
-
-## 5 The standard workflow
-
-![workflow](media/flow_workflow.en.png)
-
-| Step | Where | What | Output |
-|---|---|---|---|
-| ① Cull | Explorer / LR | go through by batch, delete soft, shaken, duplicated, blocked | a clean candidate set |
-| ② Pick the keepers | Lightroom | only 5–10%, finished by hand | a few publishable frames |
-| ③ Batch run · **the app** | iKun Insect Studio | drop the rest in, policy = protect what I edited | one `.xmp` per photo |
-| ④ Global fine-tuning · **Lightroom** | Lightroom | white balance, overall exposure, colour, local adjustments — in bulk | one consistent look |
-| ⑤ Export · **Lightroom** | Lightroom | preset → export (size, output sharpening, watermark) | deliverables |
-
-**② and ③ cannot swap**: finish the hand edits first, then let the batch skip them.
-
-### About step ④
-
-**The real fine-tuning happens in Lightroom** — white balance, overall exposure, tone curve,
-local masks. That is where a batch becomes one look, and it is a judgement call, not a measurement.
-The app only puts the crop and the exposure on the sliders.
-
-> White balance is deliberately not written: whether a scene should be cooler or warmer is an
-> expressive choice, not something you can measure off the frame.
 
 ---
 
@@ -112,8 +129,9 @@ How: open the photo → drag the head point → **Done**. The correction is reme
 geometrically similar frames (nearest-neighbour from 3 records, a 7-parameter linear residual from 25).
 
 - It only moves the **crop box**; nothing is written into Lightroom
-- A rescue for the odd frame, not a per-batch step
-- You can export the accumulated corrections as training samples (see 6.2)
+- **Every nudge makes the model fit your judgement better** — the corrections accumulate as
+  training samples and can be exported at any time (see 6.2)
+- Not a per-batch step: fix it when you see it
 
 ### 6.2 Training your own crop model
 
@@ -141,8 +159,8 @@ built-in model and you can switch back at any time.
 ## 8 FAQ
 
 **Q: Nothing changed in Lightroom.**
-A: The photos were edited after import — you must click Read Metadata from File once. Fresh imports
-do not need it.
+A: Check whether the run happened **before** import. A run before import is picked up automatically;
+a run after import needs one click on Read Metadata from File.
 
 **Q: Will it overwrite my edits?**
 A: With 「protect what I edited」 it only fills the ones you have not touched. 「Overwrite」 changes all.
@@ -158,8 +176,10 @@ A: 1–3 s per photo on a GPU; faster with live preview off.
 
 ## 9 Known limits
 
-1. **Close-ups like the Qinghai set** (insect fills the frame, edge-hugging, multi-subject): IoU 0.70
-   against 0.76–0.88 elsewhere
-2. **Rotated crops** (~8%): the app only produces axis-aligned boxes
-3. **No white balance, no local adjustments** — always yours to do
-4. When the insect is under 8% of the frame width the mask blurs and the box drifts — check the image
+1. **No rotated crops.** About 8% of your finished crops are rotated; the app only produces
+   axis-aligned boxes, so those will not match. May be added later.
+2. **No white balance.** Not for lack of trying: nothing we tried predicts your setting well —
+   inside/outside the mask, specular highlights, multi-feature models — a constant beats them all.
+3. **Exposure is an estimate.** Large moves (±1.5 EV and beyond) drift; use it as a starting point.
+4. **Small insects drift.** When the insect is under 8% of the frame width the mask blurs and the
+   box can be off — check those frames.
