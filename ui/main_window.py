@@ -2091,6 +2091,28 @@ class MainWindow(QMainWindow):
         self._last_preview = None      # 处理中的下一帧也按新设置
         t = self._edit_task
         if t is None or not self.preview.is_editing():
+            # 不在微调里：把当前正在看的那张按新开关重画一遍
+            path = self._preview_pin
+            if not path:
+                it = self.list.currentItem()
+                if it is not None:
+                    path = it.data(Qt.UserRole + 1)       # 列表里路径存在 UserRole+1
+                    if not path:
+                        row = it.data(Qt.UserRole)
+                        if isinstance(row, int) and 0 <= row < len(self.engine.tasks):
+                            path = self.engine.tasks[row].path
+            if path:
+                ev = None
+                try:
+                    task = next((x for x in self.engine.tasks if x.path == path), None)
+                    if task is not None and task.result and on:
+                        ev = task.result.get("ev")
+                except Exception:      # noqa: BLE001
+                    ev = None
+                fp = self.engine.refresh_ev(path, ev)
+                if fp:
+                    self.preview.set_image(fp)
+                    self._last_preview = "pinned"
             return
         # 保留已经拖过的框，只换底图
         keep = {k: self.preview.box(k) for k in ("crop", "core", "full", "head")}

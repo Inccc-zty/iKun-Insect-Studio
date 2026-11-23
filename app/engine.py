@@ -791,6 +791,35 @@ class Engine:
                     pass
         return out
 
+    def refresh_ev(self, path, ev):
+        """就地重画某张的实时预览（切「曝光预览」开关时用）。
+
+        底图还在内存就直接画；不在就按原图 + 掩膜重建。返回新图路径，失败返回 ""。
+        """
+        with self.lock:
+            task = next((t for t in self.tasks if t.path == path), None)
+            r = dict(task.result) if task and task.result else None
+        if not r or not r.get("crop"):
+            return ""
+        kit = self._kits.get(path)
+        if kit is None:
+            try:
+                prev = rawio.preview_thumb(path, 1100)
+                mask = self._load_mask(r.get("mask"))
+                if mask is None:
+                    mask = np.zeros((64, 64), np.uint8)
+                kit = (PreviewKit(prev, mask,
+                                  int(self.cfg.get("max_preview_side") or 1000)), None)
+            except Exception:      # noqa: BLE001
+                return ""
+        try:
+            img = kit[0].render(r["core"], r["full"], r.get("head_xy"),
+                                r["crop"], ev=ev)
+            fp = self._save_preview(img, transient=True)
+            return fp or ""
+        except Exception:          # noqa: BLE001
+            return ""
+
     def live_preview(self):
         with self.lock:
             return dict(self.live) if self.live else {}
