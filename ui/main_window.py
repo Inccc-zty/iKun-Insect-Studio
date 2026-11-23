@@ -27,7 +27,7 @@ from PySide6.QtGui import (QPixmap, QFont, QColor, QImage, QIcon, QPainter,
                            QPen, QRegion)
 from PySide6.QtWidgets import (
     QSizePolicy, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-    QComboBox, QListWidget, QListWidgetItem, QProgressBar,
+    QComboBox, QListWidget, QListWidgetItem, QProgressBar, QSplitter,
     QTabWidget, QLineEdit, QFileDialog, QMessageBox, QGroupBox, QGridLayout, QScrollArea,
     QCheckBox, QTextEdit, QHeaderView, QFrame,
     QStyledItemDelegate, QStyle, QStyleOptionViewItem, QApplication,
@@ -70,7 +70,7 @@ TEXT = {
         "ev_prev_off": "曝光预览：关（显示原图）",
         "ev_prev_tip": "开：整张按算出的 EV 提亮/压暗；关：显示原图。"
                        "近似：±1 档以内和 Lightroom 基本一致，大正曝光会比 LR 更容易死白。",
-        "xmp": "已有 XMP", "xmp_tip": "软件写的可以覆盖，你亲手改过的默认不动",
+        "xmp": "已有 XMP 的图片", "xmp_tip": "软件写的可以覆盖，你亲手改过的默认不动",
         "policies": ["保护你修的图", "全部跳过", "全部覆盖"],
         "policy_tip": "保护你修的图：软件写过的可以覆盖，你改过的跳过；"
                       "全部跳过：任何同名 XMP 都不动；"
@@ -101,7 +101,7 @@ TEXT = {
         "m_ev": "EV", "m_in": "L_in", "m_box": "L_box", "m_w": "框宽",
         "m_sh": "锐化", "m_origin": "来源",
         "o_new": "新建", "o_auto": "软件", "o_manual": "你修的",
-        "slow_hint": "（会降低速度）",
+        "slow_hint": "（会降低速度，最小化自动暂停）",
         "sheet": "结果拼版", "sheet_n": "{n} 张", "export": "导出拼版",
         "open_dir": "打开目录",
         "exporting": "正在拼版 {a}/{b}…", "export_done": "已导出 {n} 个文件：{p}",
@@ -189,7 +189,7 @@ TEXT = {
         "ev_prev_tip": "On: the whole frame brightened/darkened by the computed EV. "
                        "Off: the original. Approximate: fine within ±1 EV, big positive "
                        "values clip harder than Lightroom.",
-        "xmp": "Existing XMP", "xmp_tip": "Overwrite ours, keep yours by default",
+        "xmp": "Photos with XMP", "xmp_tip": "Overwrite ours, keep yours by default",
         "policies": ["Keep mine", "Skip all", "Overwrite"],
         "policy_tip": "Keep mine: overwrite what this app wrote, skip what you edited; "
                       "Skip all: never touch an existing XMP; "
@@ -220,7 +220,7 @@ TEXT = {
         "m_ev": "EV", "m_in": "L_in", "m_box": "L_box", "m_w": "Crop w",
         "m_sh": "Sharpen", "m_origin": "Origin",
         "o_new": "new", "o_auto": "app", "o_manual": "manual",
-        "slow_hint": "(slower)",
+        "slow_hint": "(slower, paused when minimised)",
         "sheet": "Contact sheet", "sheet_n": "{n} photos", "export": "Export sheet",
         "open_dir": "Open folder",
         "exporting": "Building sheet {a}/{b}…", "export_done": "Wrote {n} file(s): {p}",
@@ -1081,7 +1081,9 @@ class MainWindow(QMainWindow):
         # 上下方向键只改 currentRow，不发 itemClicked —— 这里补上
         self.list.currentRowChanged.connect(self._on_row_changed)
         lv.addWidget(self.list, 1)
-        v.addWidget(left, 5)
+        self.split_main = QSplitter(Qt.Horizontal)
+        self.split_main.setChildrenCollapsible(False)
+        self.split_main.addWidget(left)
 
         # ---------- 右：预览 + 当前数字 + 缩略图墙
         right = QFrame()
@@ -1090,29 +1092,41 @@ class MainWindow(QMainWindow):
         rv.setContentsMargins(12, 10, 12, 10)
         rv.setSpacing(7)
 
+        # 预览区（开关 + 图例 + 预览 + 数字）与拼版区之间可拖动
+        top_box = QWidget()
+        tlay = QVBoxLayout(top_box)
+        tlay.setContentsMargins(0, 0, 0, 0)
+        tlay.setSpacing(7)
+        sheet_box = QWidget()
+        slay = QVBoxLayout(sheet_box)
+        slay.setContentsMargins(0, 0, 0, 0)
+        slay.setSpacing(4)
+
         ph = QHBoxLayout()
         ph.setSpacing(12)
         self.chk_prev = QCheckBox(self._t("realtime"))
         self.chk_prev.setChecked(bool(self.cfg.get("preview_enabled")))
         self.chk_prev.stateChanged.connect(self._preview_toggle)
-        # 「实时预览」两行：勾选框 + 下面一行小字说明会拖慢速度
-        _col = QVBoxLayout()
-        _col.setContentsMargins(0, 0, 0, 0)
-        _col.setSpacing(0)
-        _col.addWidget(self.chk_prev)
-        self.l_slow = QLabel(self._t("slow_hint"))
-        self.l_slow.setObjectName("hint")
-        _col.addWidget(self.l_slow)
-        ph.addLayout(_col)
-        self.l_mini = QLabel(self._t("minimize"))
-        self.l_mini.setObjectName("hint")
-        ph.addWidget(self.l_mini)
 
         self.chk_ev = QCheckBox(self._t("ev_prev"))
         self.chk_ev.setChecked(bool(self.cfg.get("preview_exposure", True)))
         self.chk_ev.setToolTip(self._t("ev_prev_tip"))
         self.chk_ev.stateChanged.connect(self._evprev_toggle)
-        ph.addWidget(self.chk_ev)
+
+        # 两个开关并排，说明合成一行放它们下面
+        _row = QHBoxLayout()
+        _row.setContentsMargins(0, 0, 0, 0)
+        _row.setSpacing(14)
+        _row.addWidget(self.chk_prev)
+        _row.addWidget(self.chk_ev)
+        _col = QVBoxLayout()
+        _col.setContentsMargins(0, 0, 0, 0)
+        _col.setSpacing(0)
+        _col.addLayout(_row)
+        self.l_slow = QLabel(self._t("slow_hint"))
+        self.l_slow.setObjectName("hint")
+        _col.addWidget(self.l_slow)
+        ph.addLayout(_col)
         ph.addStretch(1)                 # 后面这一组整体靠右
         ph.addSpacing(24)
 
@@ -1134,7 +1148,7 @@ class MainWindow(QMainWindow):
         self.chk_follow.setToolTip(self._t("follow_tip"))
         self.chk_follow.stateChanged.connect(self._follow_toggle)
         ph.addWidget(self.chk_follow)
-        rv.addLayout(ph)
+        tlay.addLayout(ph)
 
         # 图例单独一行靠右；微调条在左侧，只在编辑时出现
         self.edit_bar = QWidget()
@@ -1163,13 +1177,13 @@ class MainWindow(QMainWindow):
         self.legend_layout.setContentsMargins(0, 0, 0, 0)
         self.legend_layout.setSpacing(14)
         lh.addWidget(self.legend_holder)
-        rv.addLayout(lh)
+        tlay.addLayout(lh)
 
         self.preview = Preview(self._t("ph"))
         self.preview.edited.connect(self._on_edit_changed)
         self.preview.committed.connect(self._commit_edit)
         self.preview.cancelled.connect(self._cancel_edit)
-        rv.addWidget(self.preview, 1)
+        tlay.addWidget(self.preview, 1)
 
         # 当前这张的一行数字
         strip = QHBoxLayout()
@@ -1184,7 +1198,7 @@ class MainWindow(QMainWindow):
         strip.addWidget(self.l_cur)
         strip.addWidget(self.l_metrics, 1)
         strip.addWidget(self.l_state)
-        rv.addLayout(strip)
+        tlay.addLayout(strip)
 
         # 结果缩略图墙
         gh = QHBoxLayout()
@@ -1204,7 +1218,7 @@ class MainWindow(QMainWindow):
         self.b_open.clicked.connect(self._open_output_dir)
         gh.addWidget(self.b_export)
         gh.addWidget(self.b_open)
-        rv.addLayout(gh)
+        slay.addLayout(gh)
 
         self.grid = QListWidget()
         self.grid.setViewMode(QListWidget.IconMode)
@@ -1217,10 +1231,20 @@ class MainWindow(QMainWindow):
         self.grid.setFrameShape(QFrame.NoFrame)
         self.grid.setObjectName("grid")
         self.grid.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.grid.setFixedHeight(208)
         self.grid.itemClicked.connect(self._on_grid_clicked)
-        rv.addWidget(self.grid)
-        v.addWidget(right, 8)
+        slay.addWidget(self.grid)
+        self.split_right = QSplitter(Qt.Vertical)
+        self.split_right.setChildrenCollapsible(False)
+        self.split_right.addWidget(top_box)
+        self.split_right.addWidget(sheet_box)
+        self.split_right.setStretchFactor(0, 1)
+        self.split_right.setStretchFactor(1, 0)
+        rv.addWidget(self.split_right, 1)
+        self.split_main.addWidget(right)
+        self.split_main.setStretchFactor(0, 5)
+        self.split_main.setStretchFactor(1, 8)
+        v.addWidget(self.split_main, 1)
+        self._restore_split()
 
         wv.addWidget(w, 1)
         wv.addWidget(self._footer())
@@ -2577,7 +2601,24 @@ class MainWindow(QMainWindow):
         if getattr(self, "train_page", None) is not None:
             self._fit_train_page()
 
+    def _restore_split(self):
+        """恢复上次拖出来的两处分栏宽度。"""
+        try:
+            sm = self.cfg.get("split_main")
+            self.split_main.setSizes(sm if isinstance(sm, list) and len(sm) == 2
+                                     else [520, 900])
+            sr = self.cfg.get("split_right")
+            self.split_right.setSizes(sr if isinstance(sr, list) and len(sr) == 2
+                                      else [640, 220])
+        except Exception:      # noqa: BLE001
+            pass
+
     def closeEvent(self, e):
+        try:
+            self.cfg.update(split_main=list(self.split_main.sizes()),
+                            split_right=list(self.split_right.sizes()))
+        except Exception:      # noqa: BLE001
+            pass
         self.engine.stop()
         super().closeEvent(e)
 
