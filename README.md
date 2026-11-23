@@ -19,7 +19,6 @@ sharpening, written as a Lightroom `.xmp`. White balance is deliberately left al
 
 - **No white balance.** Only a constant reproduces what the operator actually does
   (−1.000 regression slope on As Shot). The reasoning is a whole chapter: `docs/06-white-balance.md`.
-- **No reframing.** It never rotates, never changes aspect ratio, never touches composition.
 - **No matting.** The mask is a ruler, not a cut-out — the red overlay only exists so you can
   confirm it found the animal.
 

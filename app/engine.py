@@ -752,9 +752,20 @@ class Engine:
                 except Exception:      # noqa: BLE001  学习失败不能影响写 XMP
                     learned = None
 
-        # 重画这张的缩略图（底图还在内存里就直接用，不用重跑模型）
+        # 重画这张的缩略图：底图不在内存（被挤掉了）就按原图 + 掩膜重建一次，
+        # 否则界面会继续显示旧的那张，头点看着像"跳回错误位置"。
         pv = None
         kit = self._kits.get(path)
+        if kit is None:
+            try:
+                prev = rawio.preview_thumb(path, 1100)
+                mask = self._load_mask(r.get("mask"))
+                if mask is None:
+                    mask = np.zeros((64, 64), np.uint8)
+                kit = (PreviewKit(prev, mask,
+                                  int(self.cfg.get("max_preview_side") or 1000)), None)
+            except Exception:      # noqa: BLE001
+                kit = None
         if kit is not None:
             try:
                 img = kit[0].render(core, full, head, crop)
@@ -771,7 +782,7 @@ class Engine:
                 cy=round((crop[1] + crop[3]) / 2, 4),
                 core=[round(v, 5) for v in core], full=[round(v, 5) for v in full],
                 manual_crop=True,
-                preview=os.path.basename(pv) if pv else None,
+                preview=os.path.basename(pv) if pv else (r.get("preview") or None),
                 origin="manual", written=wr["written"],
                 manual_head=[round(float(head[0]), 6), round(float(head[1]), 6)]
                             if head is not None else None,

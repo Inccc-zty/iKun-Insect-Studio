@@ -1097,6 +1097,8 @@ class MainWindow(QMainWindow):
         self.chk_ev.setToolTip(self._t("ev_prev_tip"))
         self.chk_ev.stateChanged.connect(self._evprev_toggle)
         ph.addWidget(self.chk_ev)
+        ph.addStretch(1)                 # 后面这一组整体靠右
+        ph.addSpacing(24)
 
         self.l_xmp = QLabel(self._t("xmp"))
         self.l_xmp.setObjectName("fieldLabel")
@@ -1109,13 +1111,13 @@ class MainWindow(QMainWindow):
         _fit_combo(self.cb_policy)
         self.cb_policy.currentIndexChanged.connect(self._policy_changed)
         ph.addWidget(self.cb_policy)
+        ph.addSpacing(14)
 
         self.chk_follow = QCheckBox(self._t("follow"))
         self.chk_follow.setChecked(bool(self.cfg.get("follow")))
         self.chk_follow.setToolTip(self._t("follow_tip"))
         self.chk_follow.stateChanged.connect(self._follow_toggle)
         ph.addWidget(self.chk_follow)
-        ph.addStretch(1)
         rv.addLayout(ph)
 
         # 图例单独一行靠右；微调条在左侧，只在编辑时出现
