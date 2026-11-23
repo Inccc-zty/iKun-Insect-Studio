@@ -1249,7 +1249,7 @@ class MainWindow(QMainWindow):
         self._restore_split()
         # 拖一下就记一次，别等关窗（关窗时被强杀就丢了）
         self.split_main.splitterMoved.connect(lambda *_: self._save_split())
-        self.split_right.splitterMoved.connect(lambda *_: self._save_split())
+        self.split_right.splitterMoved.connect(self._on_sheet_dragged)
 
         wv.addWidget(w, 1)
         wv.addWidget(self._footer())
@@ -2462,14 +2462,16 @@ class MainWindow(QMainWindow):
 
     # ---------------------------------------------------------------- 刷新
     def _refresh_grid(self):
-        # 拼版没有内容时把它压成一条，别占着半个屏
+        # 拼版为空时压成一条；有内容再展开。只做一次状态切换，
+        # 用户亲手拖过之后一律不再自动改。
         try:
-            tot = sum(self.split_right.sizes()) or 700
-            if self.grid.count() == 0:
-                self.split_right.setSizes([max(200, tot - 56), 56])
-            elif getattr(self, "_sheet_empty", True):
-                self.split_right.setSizes([max(260, tot - 230), 230])
-            self._sheet_empty = self.grid.count() == 0
+            now_empty = self.grid.count() == 0
+            if (not getattr(self, "_sheet_user_dragged", False)
+                    and now_empty != getattr(self, "_sheet_empty", None)):
+                tot = sum(self.split_right.sizes()) or 700
+                self.split_right.setSizes([max(200, tot - 56), 56] if now_empty
+                                          else [max(260, tot - 230), 230])
+            self._sheet_empty = now_empty
         except Exception:      # noqa: BLE001
             pass
         items = self.engine.sheet_items()
@@ -2632,6 +2634,11 @@ class MainWindow(QMainWindow):
                                       else [640, 220])
         except Exception:      # noqa: BLE001
             pass
+
+    def _on_sheet_dragged(self, *args):
+        """用户亲手拖过拼版分隔条：从此不再自动收起/展开，免得"一拖就弹回去"。"""
+        self._sheet_user_dragged = True
+        self._save_split()
 
     def _save_split(self):
         try:
