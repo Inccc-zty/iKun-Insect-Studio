@@ -3,7 +3,7 @@
 **Automated post-processing for insect macro RAW.** One pass per photo: crop + exposure +
 sharpening, written as a Lightroom `.xmp`. White balance is deliberately left alone.
 
-> 中文版见 [README.zh-CN.md](README.zh-CN.md) · 中文完整说明在 [docs/](docs/)（写作中）
+> 中文版见 [README.zh-CN.md](README.zh-CN.md) · **[技术报告（中文）](docs/report.md)** · [Technical report](docs/report.en.md)
 
 ---
 
@@ -39,6 +39,11 @@ morphological opening, whole via bounding box). A self-trained ResNet50 turns a 
 body box into a 64×64 heat map, and soft-argmax turns it into a head point. Those numbers — 13 of
 them — become 105 terms that predict the crop centre and width; two brightness percentiles become
 the exposure; the aperture looks up the sharpening. Nothing else is estimated.
+
+## Report
+
+**[docs/report.md](docs/report.md)** — every scheme that was tried, why it was rejected,
+and a full teardown of the one that survived. [English](docs/report.en.md).
 
 ## Numbers
 

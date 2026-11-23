@@ -3,7 +3,7 @@
 **昆虫微距 RAW 的自动后期**：一张照片跑一遍，得到裁切 + 曝光 + 锐化，写成 Lightroom 的 `.xmp`。
 白平衡故意不碰。
 
-> English: [README.md](README.md)
+> English: [README.md](README.md) · **[技术报告](docs/report.md)** · [English](docs/report.en.md)
 
 ---
 
@@ -37,6 +37,10 @@
 整体：掩膜外接矩形）。身体框外扩 15% 裁 256²，喂给自训 ResNet50 得到 64×64 热力图，
 soft-argmax 取加权重心 → 一个头点。这 13 个数展开成 105 项，预测框心 x / 框心 y / 框宽；
 两个亮度分位数决定曝光；光圈查表决定锐化。其它什么都不估。
+
+## 报告
+
+**[docs/report.md](docs/report.md)** —— 试过的每个方案、为什么被否，以及活下来那套的完整拆解。
 
 ## 关键数字
 
