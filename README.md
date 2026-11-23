@@ -44,10 +44,16 @@ the exposure; the aperture looks up the sharpening. Nothing else is estimated.
 
 | Module | Data | Metric |
 |---|---|---|
-| Crop | 4,184 photos / 11 batches | hold-out IoU median **0.8650**, blind test 80 photos **0.9017** |
-| Exposure | 4,396 photos / 11 batches | hold-out MAE **0.29 EV** (constant 0.41) |
+| Crop | 4,184 fit sample (11 folders) | in-sample IoU median **0.8756**, hold-out **0.8650**, 80-photo blind test **0.9017** |
+| Crop · re-checked | **2,280 current set / 15 folders** | median **0.8172**, ≥0.8 **54.2%** |
+| Exposure | 2,238 current rows | hold-out MAE **0.286 EV** (constant 0.404) |
 | Head | 6 annotated RAWs + 500 reviewed | median error **0.12 · core width** |
 | White balance | 5,065 JPG / 2,280 RAW | constant T=5333/+16, MAE **163 K** — best achievable |
+
+> **Read the crop numbers carefully.** The 4,184-row fit sample is 56% one folder
+> (`2025.7 青海`). On the current in-scope set (2,280 photos across 15 folders, five of
+> them never seen in fitting) the same coefficients score **0.8172**. Both are reported;
+> see `reports/2026-11-22-rerun.md` for the reconciliation.
 
 ## Repository layout
 
