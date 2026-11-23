@@ -53,27 +53,30 @@ def _peek(path: str, kind: str):
             "fitted": d.get("version") or d.get("fitted") or ""}
 
 
-def _label(name: str, info: dict, kind: str, builtin=False) -> str:
+def _label(name: str, info: dict, kind: str, builtin=False, en=False) -> str:
     bits = [name]
     if info.get("n"):
-        bits.append(f"{int(info['n'])} 张")
+        bits.append(f"{int(info['n'])} photos" if en else f"{int(info['n'])} 张")
     m = info.get("metric")
     if isinstance(m, (int, float)):
-        bits.append(f"留出 {'IoU' if kind == 'crop' else 'MAE'} {m:.3f}")
+        bits.append(("hold-out " if en else "留出 ")
+                    + f"{'IoU' if kind == 'crop' else 'MAE'} {m:.3f}")
     return " · ".join(bits)
 
 
-def list_models(kind: str):
+def list_models(kind: str, en: bool = False):
     """返回 [{path, name, label, builtin, n, metric}]，第一项永远是内置。"""
     out = []
     bp = builtin_path(kind)
     try:
         info = _peek(bp, kind)
-        out.append({"path": "", "name": "内置", "builtin": True,
-                    "label": _label("内置", info, kind, True), **info})
+        out.append({"path": "", "name": "Built-in" if en else "内置", "builtin": True,
+                    "label": _label("Built-in" if en else "内置", info, kind, True, en),
+                    **info})
     except Exception:          # noqa: BLE001  算法包损坏也要能进界面
-        out.append({"path": "", "name": "内置", "builtin": True,
-                    "label": "内置（读取失败）", "n": None, "metric": None})
+        out.append({"path": "", "name": "Built-in" if en else "内置", "builtin": True,
+                    "label": ("Built-in (failed to read)" if en else "内置（读取失败）"),
+                    "n": None, "metric": None})
     d = store_dir(kind)
     for f in sorted(os.listdir(d)):
         if not f.lower().endswith(".json"):

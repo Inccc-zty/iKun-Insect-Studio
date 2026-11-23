@@ -169,9 +169,9 @@ TEXT = {
         "title": "iKun Insect Studio · 昆虫自动化后期",
     },
     "en": {
-        "subtitle": "Insect Retouching, Automated",
+        "subtitle": "Automatic Insect Post-processing",
         "mode": "Mode", "precision": "Precision", "device": "Device",
-        "modes": ["Both", "Crop only", "Exposure only"],
+        "modes": ["Crop + Exposure", "Crop only", "Exposure only"],
         "segs": ["Mask 768", "Mask 512"],
         "start": "Start", "pause": "Pause", "resume": "Resume",
         "to_light": "Light", "to_dark": "Dark",
@@ -287,7 +287,7 @@ TEXT = {
         "mini_note": "Minimized: preview rendering paused (processing continues)",
         "click_prev": "Preview: {n}",
         "api_ready": "Local API ready: {u}",
-        "title": "iKun Insect Studio · Insect Retouching",
+        "title": "iKun Insect Studio · Automatic Insect Post-processing",
     },
 }
 
@@ -1139,6 +1139,7 @@ class MainWindow(QMainWindow):
             {"protect": 0, "skip_all": 1, "force": 2}.get(self.engine.policy(), 0))
         self.cb_policy.setToolTip(self._t("policy_tip"))
         _fit_combo(self.cb_policy)
+        _fit_combo(self.cb_mode)
         self.cb_policy.currentIndexChanged.connect(self._policy_changed)
         ph.addWidget(self.cb_policy)
         ph.addSpacing(14)
@@ -1461,6 +1462,12 @@ class MainWindow(QMainWindow):
         self.about = QTextEdit()
         self.about.setReadOnly(True)
         self.about.setObjectName("log")
+        self._refresh_models()
+        try:
+            self.l_speed.setText(self._t("speed_na"))
+            self.l_eta.setText(self._t("eta_na"))
+        except Exception:      # noqa: BLE001
+            pass
         self.about.setHtml(self._about_html())
         v.addWidget(self.about)
         return w
@@ -1571,7 +1578,7 @@ class MainWindow(QMainWindow):
                     f'裁切会飘；纯背面也会得到一个「大致靠前」的点——看着不对就拖一下。</p>')
 
         if en:
-            title = "iKun Insect Studio · Insect Retouching, Automated"
+            title = "iKun Insect Studio · Automatic Insect Post-processing"
             p1 = "One pipeline, one mask, three modules:"
             p3 = ("How to use: process the photos first, then import them into Lightroom "
                   "together with their .xmp files. Only a batch you already imported needs "
@@ -1716,6 +1723,7 @@ class MainWindow(QMainWindow):
         self.b_theme.setText(self._t("to_light" if self._theme == "dark" else "to_dark"))
         _fit_width(self.b_theme)
         _fit_combo(self.cb_policy)
+        _fit_combo(self.cb_mode)
         self.b_start.setText(self._t("start"))
         self.b_pause.setText(self._t("resume") if self.engine.paused else self._t("pause"))
 
@@ -1730,7 +1738,7 @@ class MainWindow(QMainWindow):
         self.l_hint.setText(self._t("drop"))
         self.chk_prev.setText(self._t("realtime"))
         self.l_slow.setText(self._t("slow_hint"))
-        self.l_mini.setText(self._t("minimize"))
+        self.l_slow.setText(self._t("slow_hint"))
         self.chk_ev.setText(self._t("ev_prev"))
         self.chk_ev.setToolTip(self._t("ev_prev_tip"))
         self.l_xmp.setText(self._t("xmp"))
@@ -1773,6 +1781,12 @@ class MainWindow(QMainWindow):
         self.l_head_note.setText(self._t("head_note"))
         self.l_maint.setText(self._t("reset_note"))
         self.b_reset.setText(self._t("reset_btn"))
+        self._refresh_models()
+        try:
+            self.l_speed.setText(self._t("speed_na"))
+            self.l_eta.setText(self._t("eta_na"))
+        except Exception:      # noqa: BLE001
+            pass
         self.about.setHtml(self._about_html())
         self._update_legend()
         self._refresh_list()
@@ -2312,7 +2326,7 @@ class MainWindow(QMainWindow):
             cur = self.cfg.get(key) or ""
             cb.blockSignals(True)
             cb.clear()
-            for m in models.list_models(kind):
+            for m in models.list_models(kind, en=self._lang == "en"):
                 cb.addItem(m["label"], m["path"])
             idx = cb.findData(cur)
             cb.setCurrentIndex(idx if idx >= 0 else 0)
@@ -2320,7 +2334,7 @@ class MainWindow(QMainWindow):
 
     def _model_changed(self, kind, cb):
         key = "coef" if kind == "crop" else "ev_coef"
-        item = models.list_models(kind)
+        item = models.list_models(kind, en=self._lang == "en")
         i = cb.currentIndex()
         if 0 <= i < len(item) and item[i].get("broken"):
             QMessageBox.warning(self, "", item[i]["label"])
