@@ -21,10 +21,18 @@ the same crop, the same exposure nudge, over and over.
 
 **The app does exactly those two things:**
 
-- **Crop** — accurate enough to use as-is
-- **Exposure** — an estimate; treat it as a starting point and pass through Lightroom
+- **Crop** — usually usable as-is, sometimes off
+- **Exposure** — an estimate, often off
 
-The result is written as a sidecar `.xmp` that Lightroom reads directly.
+Either can be wrong; nothing here is 100%. The value is not accuracy, it is **turning a hundred
+repetitive edits into a few minutes** — you glance at the misses and fix them, which is far faster
+than cropping from scratch.
+
+The result is a sidecar `.xmp` that post-processing software reads directly.
+
+> The app was built against **Lightroom** and **Adobe Camera Raw (ACR)** as references.
+> `.xmp` is Adobe's open sidecar standard: Lightroom, Camera Raw, Bridge and Photoshop all read it.
+> Whenever this manual says "post-processing software", it means that family.
 
 ![batch](media/panel80.jpg)
 
@@ -41,8 +49,8 @@ Three columns per row: original / boxes and head point / result.
 | ① Cull | any culling tool | go through by batch; delete soft, shaken, duplicated, blocked | a clean candidate set |
 | ② Pick the keepers | Lightroom | only 5–10%, finished by hand | a few publishable frames |
 | ③ Batch run · **the app** | iKun Insect Studio | drop the rest in, policy = protect what I edited | one `.xmp` per photo |
-| ④ Global fine-tuning · **Lightroom** | Lightroom | white balance, overall exposure, colour, local adjustments — in bulk | one consistent look |
-| ⑤ Export · **Lightroom** | Lightroom | preset → export (size, output sharpening, watermark) | deliverables |
+| ④ Global fine-tuning | post-processing app | white balance, overall exposure, colour, local adjustments — in bulk | one consistent look |
+| ⑤ Export | post-processing app | preset → export (size, output sharpening, watermark) | deliverables |
 
 **② and ③ cannot swap**: finish the hand edits first, then let the batch skip them.
 
@@ -52,7 +60,7 @@ Three columns per row: original / boxes and head point / result.
 
 ### About step ④
 
-**The real fine-tuning happens in Lightroom** — white balance, overall exposure, tone curve, local
+**The real fine-tuning happens in post-processing software** (Lightroom / Camera Raw) — white balance, overall exposure, tone curve, local
 masks. That is where a batch becomes one look, and it is a judgement call, not a measurement.
 The app only puts the crop and the exposure on the sliders.
 
@@ -73,15 +81,15 @@ The app only puts the crop and the exposure on the sliders.
 
 ---
 
-## 3 First batch in five minutes
+## 3 How to run your first batch
 
 1. Drop **a folder**, or **a batch of photos**, onto the window
 2. Mode: `Crop + Exposure`
 3. 「Photos with XMP」 → **protect what I edited**
 4. Press **Start**
-5. **Import the batch into Lightroom** — the `.xmp` is read on import and the crop and exposure land on the sliders
+5. **Import the batch into your post-processing software** — the `.xmp` is read on import and the crop and exposure land on the sliders
 
-> Only if these photos are **already in LR** do you need one extra click: select all → right-click →
+> Only if these photos are **already in the software** do you need one extra click: select all → right-click →
 > **Read Metadata from File**.
 
 ---
@@ -102,7 +110,7 @@ Where the three numbers come from:
 
 ---
 
-## 5 How it plugs into Lightroom
+## 5 How it plugs into your post-processing software
 
 ![with LR](media/flow_lr.en.png)
 
@@ -110,8 +118,8 @@ Two cases, one action differs:
 
 | Your situation | What to do |
 |---|---|
-| **New import** | just import into LR — **the `.xmp` is read on import**, nothing else to click |
-| The batch is **already in** LR | after the run: select all → right-click → **Read Metadata from File** |
+| **New import** | just import — **the `.xmp` is read on import**, nothing else to click |
+| The batch is **already in** the software | after the run: select all → right-click → **Read Metadata from File** |
 
 **The RAW is never modified**, so either order is safe.
 
@@ -158,7 +166,7 @@ built-in model and you can switch back at any time.
 
 ## 8 FAQ
 
-**Q: Nothing changed in Lightroom.**
+**Q: Nothing changed in my software.**
 A: Check whether the run happened **before** import. A run before import is picked up automatically;
 a run after import needs one click on Read Metadata from File.
 

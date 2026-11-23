@@ -114,10 +114,10 @@ STEPS = {
         ("跑批", "软件", "green",
          ["其余全部拖进软件，策略选「跳过已有 XMP」",
           "只做掩膜 → 裁切 → 曝光 → 锐化，写成 .xmp；白平衡不碰"]),
-        ("统一微调", "Lightroom", "deep",
-         ["白平衡、整体曝光、色彩、局部调整，在 LR 里成批做",
+        ("统一微调", "图像后期软件", "deep",
+         ["白平衡、整体曝光、色彩、局部调整，在这里成批做",
           "软件里的头部微调是可选项，不属于这条主线"]),
-        ("导出", "Lightroom", "deep",
+        ("导出", "图像后期软件", "deep",
          ["套统一预设 → 导出（尺寸、输出锐化、水印）",
           "软件只写 .xmp，原片一个字节都不动"]),
     ],
@@ -131,10 +131,10 @@ STEPS = {
         ("Batch run", "the app", "green",
          ["Drop the rest in, policy = skip photos with XMP",
           "Mask → crop → exposure → sharpening into .xmp; white balance untouched"]),
-        ("Global fine-tuning", "Lightroom", "deep",
-         ["White balance, overall exposure, colour, local adjustments — in LR, in bulk",
+        ("Global fine-tuning", "post-processing app", "deep",
+         ["White balance, overall exposure, colour, local adjustments — in bulk",
           "The in-app head nudge is optional and not on this mainline"]),
-        ("Export", "Lightroom", "deep",
+        ("Export", "post-processing app", "deep",
          ["Apply your preset → export (size, output sharpening, watermark)",
           "The app only writes .xmp; the RAW is never modified"]),
     ],
@@ -173,8 +173,8 @@ def wf_page(zh: bool) -> str:
 .link.deep{{background:#9dc4b1}}
 </style></head><body>
 <h1>{t("完整工作流", "The full workflow")}</h1>
-<div class="sub">{t("五步。前三步决定成片质量，后两步决定一致性；真正意义上的「微调」在 Lightroom 里。",
-                    "Five steps. The first three decide quality, the last two decide consistency — and the real fine-tuning happens in Lightroom.")}</div>
+<div class="sub">{t("五步。前三步决定成片质量，后两步决定一致性；真正意义上的「微调」在图像后期软件里。",
+                    "Five steps. The first three decide quality, the last two decide consistency — and the real fine-tuning happens in your post-processing software.")}</div>
 <div class="rule"></div>
 {"".join(body)}
 <div class="sub" style="margin-top:26px;font-size:14px">
