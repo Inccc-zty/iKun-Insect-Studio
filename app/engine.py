@@ -745,7 +745,7 @@ class Engine:
             if ((hx - px) ** 2 + (hy - py) ** 2) ** 0.5 / cw > 0.02:   # 2% 体宽才记
                 try:
                     n = head_fix.add(core, full, (px, py), (hx, hy),
-                                     batch=r.get("batch", ""))
+                                     batch=r.get("batch", ""), path=path)
                     learned = {"n": n, "dx": round((hx - px) / cw, 4),
                                "dy": round((hy - py) / cw, 4),
                                "mode": head_fix.stats().get("mode")}

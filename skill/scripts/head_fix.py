@@ -117,8 +117,11 @@ def count() -> int:
     return len(load())
 
 
-def add(core, full, pred, true, batch="") -> int:
-    """记一条「模型给 pred，用户改成 true」。返回累计条数。"""
+def add(core, full, pred, true, batch="", path="") -> int:
+    """记一条「模型给 pred，用户改成 true」。返回累计条数。
+
+    path 是这张照片的完整路径——没有它，导出的样本没法拿去重训（模型要读图）。
+    """
     if pred is None or true is None:
         raise ValueError("pred / true 都不能为空")
     p = store_path()
@@ -131,6 +134,7 @@ def add(core, full, pred, true, batch="") -> int:
         "pred": [round(float(pred[0]), 6), round(float(pred[1]), 6)],
         "true": [round(float(true[0]), 6), round(float(true[1]), 6)],
         "f": [round(v, 6) for v in _feat(core, full)],
+        "path": str(path or ""),
     }
     with _LOCK:
         with open(p, "a", encoding="utf-8") as f:
@@ -326,24 +330,37 @@ def apply(core, full, head):
 
 
 def export_csv(path: str):
-    """把累计的修正导成 CSV（给以后真要重训 CNN 时用）。返回行数。"""
+    """把累计的修正导成**能直接重训**的 CSV（列名对齐 头部标注_500.csv）。
+
+    必须有 path 才能重训——老记录没有 path 的会写成空，并在返回里计数。
+    返回 (总条数, 可用条数)。
+    """
     recs = load()
     if not recs:
-        return 0
-    cols = ["t", "batch", "core_l", "core_t", "core_r", "core_b",
-            "full_l", "full_t", "full_r", "full_b",
-            "pred_x", "pred_y", "true_x", "true_y"]
+        return 0, 0
+    cols = ["nef", "batch", "hx", "hy", "ai_hx", "ai_hy", "ai_shift", "multi",
+            "core_l", "core_t", "core_r", "core_b",
+            "full_l", "full_t", "full_r", "full_b"]
     import csv
+    usable = 0
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
         w.writerow(cols)
         for r in recs:
             c, fu = r["core"], r["full"]
-            w.writerow([r.get("t", ""), r.get("batch", ""),
+            cw = max(c[2] - c[0], 1e-6)
+            d = ((r["true"][0] - r["pred"][0]) ** 2 +
+                 (r["true"][1] - r["pred"][1]) ** 2) ** 0.5 / cw
+            pth = r.get("path", "")
+            if pth:
+                usable += 1
+            w.writerow([pth, r.get("batch", ""),
+                        round(r["true"][0], 6), round(r["true"][1], 6),
+                        round(r["pred"][0], 6), round(r["pred"][1], 6),
+                        round(d, 4), 0,
                         *[round(float(v), 6) for v in c],
-                        *[round(float(v), 6) for v in fu],
-                        r["pred"][0], r["pred"][1], r["true"][0], r["true"][1]])
-    return len(recs)
+                        *[round(float(v), 6) for v in fu]])
+    return len(recs), usable
 
 
 def clear():

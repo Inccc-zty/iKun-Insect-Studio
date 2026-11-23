@@ -105,6 +105,9 @@ TEXT = {
         "open_dir": "打开目录",
         "exporting": "正在拼版 {a}/{b}…", "export_done": "已导出 {n} 个文件：{p}",
         "export_none": "这一批还没有生成叠加图（打开实时预览再跑一遍即可）",
+        "export_head": "导出训练样本",
+        "export_none_head": "还没有累计任何头部修正（点开照片拖一下头点再点完成，就会记一条）",
+        "export_head_ok": "已导出 {n} 条，其中 {u} 条带路径，可直接并入训练集",
         "sheet_title": "iKun Insect Studio · 裁切核对",
         "models_group": "模型（系数）",
         "model_crop": "裁切", "model_ev": "曝光",
@@ -220,6 +223,9 @@ TEXT = {
         "open_dir": "Open folder",
         "exporting": "Building sheet {a}/{b}…", "export_done": "Wrote {n} file(s): {p}",
         "export_none": "Nothing to lay out yet (turn live preview on and run again)",
+        "export_head": "Export training samples",
+        "export_none_head": "No head corrections recorded yet (open a photo, drag the head point, commit)",
+        "export_head_ok": "Exported {n} rows, {u} of them carry a path and can join the training set",
         "sheet_title": "iKun Insect Studio · crop check",
         "models_group": "Models (coefficients)",
         "model_crop": "Crop", "model_ev": "Exposure",
@@ -2316,18 +2322,21 @@ class MainWindow(QMainWindow):
         self._refresh_head()
 
     def _export_head(self):
-        rows = head_fix.stats()["n"]
-        if not rows:
-            self.status.showMessage(self._t("head_none"), 5000)
+        st = head_fix.stats()
+        if not st.get("n"):
+            self.status.showMessage(self._t("export_none_head"), 8000)
             return
-        fp, _ = QFileDialog.getSaveFileName(
-            self, self._t("head_csv"),
-            os.path.join(app_root(), "data", f"head_corrections_{time.strftime('%Y%m%d')}.csv"),
-            "CSV (*.csv)")
+        fp, _ = QFileDialog.getSaveFileName(self, self._t("export_head"),
+                                            "head_fix.csv", "CSV (*.csv)")
         if not fp:
             return
-        n = head_fix.export_csv(fp)
-        self.status.showMessage(self._t("head_csv_done", n=n, p=fp), 12000)
+        try:
+            total, usable = head_fix.export_csv(fp)
+        except Exception as e:      # noqa: BLE001
+            QMessageBox.warning(self, "", str(e))
+            return
+        msg = self._t("export_head_ok", n=total, u=usable)
+        self.status.showMessage(msg, 12000)
 
     def _clear_head(self):
         if QMessageBox.question(self, "", self._t("head_clear") + "?") != QMessageBox.Yes:
