@@ -1245,6 +1245,9 @@ class MainWindow(QMainWindow):
         self.split_main.setStretchFactor(1, 8)
         v.addWidget(self.split_main, 1)
         self._restore_split()
+        # 拖一下就记一次，别等关窗（关窗时被强杀就丢了）
+        self.split_main.splitterMoved.connect(lambda *_: self._save_split())
+        self.split_right.splitterMoved.connect(lambda *_: self._save_split())
 
         wv.addWidget(w, 1)
         wv.addWidget(self._footer())
@@ -2613,12 +2616,15 @@ class MainWindow(QMainWindow):
         except Exception:      # noqa: BLE001
             pass
 
-    def closeEvent(self, e):
+    def _save_split(self):
         try:
             self.cfg.update(split_main=list(self.split_main.sizes()),
                             split_right=list(self.split_right.sizes()))
         except Exception:      # noqa: BLE001
             pass
+
+    def closeEvent(self, e):
+        self._save_split()
         self.engine.stop()
         super().closeEvent(e)
 
