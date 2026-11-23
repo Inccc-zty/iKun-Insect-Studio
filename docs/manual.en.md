@@ -1,6 +1,6 @@
 # iKun Insect Studio · Manual
 
-> For people already shooting insects and editing in Lightroom (or an equivalent).
+> For people already shooting insects and editing in Lightroom, Camera Raw or an equivalent.
 > 中文版：[manual.md](manual.md)
 
 ---

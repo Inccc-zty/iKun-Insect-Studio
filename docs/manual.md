@@ -1,6 +1,6 @@
 # iKun Insect Studio · 使用说明
 
-> 给已经在拍虫子、并且用 Lightroom（或同类软件）修图的人。
+> 给已经在拍虫子、并且用图像后期软件（Lightroom / Camera Raw）修图的人。
 > English: [manual.en.md](manual.en.md)
 
 ---
@@ -29,7 +29,7 @@
 
 > 本软件是拿 **Lightroom** 和 **Adobe Camera Raw（ACR）** 做参考开发的。
 > `.xmp` 是 Adobe 的通用标准，Lightroom、Camera Raw、Bridge、Photoshop 都读同一份；
-> 下面说到「图像后期软件」，指的就是这一类（我主要用 LR，所以例子里写 LR 的菜单）。
+> 下面说到「图像后期软件」，指的就是这一类（例子里写的是 LR 的菜单）。
 
 ![跑批](media/panel80.jpg)
 
