@@ -1114,6 +1114,12 @@ class MainWindow(QMainWindow):
         self.chk_ev.stateChanged.connect(self._evprev_toggle)
 
         # 两个开关并排，说明合成一行放它们下面
+        # 「跟随当前」不再露出来：列表默认跟着跑批滚动，你点某张就停在它上面。
+        # 仍然建一个隐藏的复选框，让内部开关逻辑保持不变。
+        self.chk_follow = QCheckBox(self._t("follow"))
+        self.chk_follow.setChecked(True)
+        self.chk_follow.setVisible(False)
+
         _row = QHBoxLayout()
         _row.setContentsMargins(0, 0, 0, 0)
         _row.setSpacing(14)
@@ -1144,11 +1150,6 @@ class MainWindow(QMainWindow):
         ph.addWidget(self.cb_policy)
         ph.addSpacing(14)
 
-        self.chk_follow = QCheckBox(self._t("follow"))
-        self.chk_follow.setChecked(bool(self.cfg.get("follow")))
-        self.chk_follow.setToolTip(self._t("follow_tip"))
-        self.chk_follow.stateChanged.connect(self._follow_toggle)
-        ph.addWidget(self.chk_follow)
         tlay.addLayout(ph)
 
         # 图例单独一行靠右；微调条在左侧，只在编辑时出现
@@ -1743,8 +1744,6 @@ class MainWindow(QMainWindow):
         self.chk_ev.setToolTip(self._t("ev_prev_tip"))
         self.l_xmp.setText(self._t("xmp"))
         self.cb_policy.setToolTip(self._t("policy_tip"))
-        self.chk_follow.setText(self._t("follow"))
-        self.chk_follow.setToolTip(self._t("follow_tip"))
         self.l_edit.setText(self._t("edit_hint"))
         self.l_edit.setToolTip(self._t("edit_tip"))
         self.b_commit.setText(self._t("commit"))
@@ -1846,9 +1845,6 @@ class MainWindow(QMainWindow):
         """所有「选中某一张」的入口统一走这里。"""
         if row < 0 or row >= len(self._tasks):
             return
-        if by_user and self.chk_follow.isChecked():
-            self._set_follow(False)
-            self.status.showMessage(self._t("follow_off"), 3500)
         self.list.setCurrentRow(row)
         item = self.list.item(row)
         if item is not None:
@@ -2183,9 +2179,6 @@ class MainWindow(QMainWindow):
             self._preview_pin = None      # 恢复跟随：不再定格在手动点的那张
             self._last_preview = None
 
-    def _follow_toggle(self):
-        self._set_follow(self.chk_follow.isChecked())
-
     def _cfg_changed(self):
         mode = ["both", "crop", "exposure"][self.cb_mode.currentIndex()]
         seg = 768 if self.cb_seg.currentIndex() == 0 else 512
@@ -2469,6 +2462,16 @@ class MainWindow(QMainWindow):
 
     # ---------------------------------------------------------------- 刷新
     def _refresh_grid(self):
+        # 拼版没有内容时把它压成一条，别占着半个屏
+        try:
+            tot = sum(self.split_right.sizes()) or 700
+            if self.grid.count() == 0:
+                self.split_right.setSizes([max(200, tot - 56), 56])
+            elif getattr(self, "_sheet_empty", True):
+                self.split_right.setSizes([max(260, tot - 230), 230])
+            self._sheet_empty = self.grid.count() == 0
+        except Exception:      # noqa: BLE001
+            pass
         items = self.engine.sheet_items()
         sig = tuple((r.get("path"), r.get("preview")) for r in items)
         if sig == self._sheet_sig:
