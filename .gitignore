@@ -1,0 +1,32 @@
+# build / packaging
+dist/
+dist_final/
+build/
+stage/
+*.spec
+__pycache__/
+*.pyc
+.venv*/
+.venv_gpu/
+
+# app runtime state (never commit)
+app/data/
+data/
+*.log
+crash.log
+
+# model weights & large binaries → Release assets, not git
+skill/assets/weights/*.pth
+*.pth
+*.onnx
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# local scratch
+_chk*/
+_tmp*/
+*.tmp

@@ -1,0 +1,15 @@
+# 已在 Windows + Python 3.13 + GTX 1650 (sm75) 上验证的版本组合
+# torch 请按自己的 CUDA 版本装：https://pytorch.org/get-started/locally/
+
+torch>=2.4,<3
+torchvision>=0.19,<1
+numpy>=1.24
+opencv-python>=4.8
+Pillow>=10
+rawpy>=0.19          # 读 RAW 内嵌预览（Z8 高效压缩 RAW 的 postprocess 会失败，本流水线不用它）
+transformers>=4.40   # 加载 BiRefNet（trust_remote_code）
+timm>=0.9            # BiRefNet 依赖 timm.layers
+kornia>=0.7          # BiRefNet 的 laplacian 边缘项
+einops>=0.7          # BiRefNet 的 rearrange
+safetensors>=0.4
+scipy>=1.10          # BiRefNet 运行期要 import scipy
