@@ -359,12 +359,6 @@ class Engine:
                 return True
             self.warm.update(state="loading", err="")
             try:
-                if dev == "cuda":
-                    try:
-                        import torch
-                        torch.backends.cudnn.benchmark = True
-                    except Exception:      # noqa: BLE001
-                        pass
                 # 两个模型并行读：串行约 6 s，并行约 4 s（都是纯 IO + 一次 CUDA 上传）
                 import concurrent.futures as _cf
                 with _cf.ThreadPoolExecutor(max_workers=2) as _ex:

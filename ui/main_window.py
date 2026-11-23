@@ -101,6 +101,7 @@ TEXT = {
         "m_ev": "EV", "m_in": "L_in", "m_box": "L_box", "m_w": "框宽",
         "m_sh": "锐化", "m_origin": "来源",
         "o_new": "新建", "o_auto": "软件", "o_manual": "你修的",
+        "slow_hint": "（会降低速度）",
         "sheet": "结果拼版", "sheet_n": "{n} 张", "export": "导出拼版",
         "open_dir": "打开目录",
         "exporting": "正在拼版 {a}/{b}…", "export_done": "已导出 {n} 个文件：{p}",
@@ -219,6 +220,7 @@ TEXT = {
         "m_ev": "EV", "m_in": "L_in", "m_box": "L_box", "m_w": "Crop w",
         "m_sh": "Sharpen", "m_origin": "Origin",
         "o_new": "new", "o_auto": "app", "o_manual": "manual",
+        "slow_hint": "(slower)",
         "sheet": "Contact sheet", "sheet_n": "{n} photos", "export": "Export sheet",
         "open_dir": "Open folder",
         "exporting": "Building sheet {a}/{b}…", "export_done": "Wrote {n} file(s): {p}",
@@ -1093,7 +1095,15 @@ class MainWindow(QMainWindow):
         self.chk_prev = QCheckBox(self._t("realtime"))
         self.chk_prev.setChecked(bool(self.cfg.get("preview_enabled")))
         self.chk_prev.stateChanged.connect(self._preview_toggle)
-        ph.addWidget(self.chk_prev)
+        # 「实时预览」两行：勾选框 + 下面一行小字说明会拖慢速度
+        _col = QVBoxLayout()
+        _col.setContentsMargins(0, 0, 0, 0)
+        _col.setSpacing(0)
+        _col.addWidget(self.chk_prev)
+        self.l_slow = QLabel(self._t("slow_hint"))
+        self.l_slow.setObjectName("hint")
+        _col.addWidget(self.l_slow)
+        ph.addLayout(_col)
         self.l_mini = QLabel(self._t("minimize"))
         self.l_mini.setObjectName("hint")
         ph.addWidget(self.l_mini)
@@ -1692,6 +1702,7 @@ class MainWindow(QMainWindow):
         self.b_clear.setText(self._t("clear"))
         self.l_hint.setText(self._t("drop"))
         self.chk_prev.setText(self._t("realtime"))
+        self.l_slow.setText(self._t("slow_hint"))
         self.l_mini.setText(self._t("minimize"))
         self.chk_ev.setText(self._t("ev_prev"))
         self.chk_ev.setToolTip(self._t("ev_prev_tip"))
