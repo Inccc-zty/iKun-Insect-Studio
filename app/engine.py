@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import collections
 import hashlib
+import json
 import os
 import shutil
 import sys
@@ -43,6 +44,9 @@ PREVIEW_DIR = os.path.join(ROOT, "data", "preview")
 # 每张照片的定稿叠加图按内容命名存一份，给「结果拼版」和右下角缩略图用
 CACHE_DIR = os.path.join(PREVIEW_DIR, "cache")
 MASK_DIR = os.path.join(PREVIEW_DIR, "masks")   # 768² PNG，约 15 KB/张
+# 整条分析结果（掩膜 + 三个框 + 头点）的缓存：同一张图重跑时省掉 0.5 s 分割
+ANALYSIS_DIR = os.path.join(ROOT, "data", "analysis_cache")
+os.makedirs(ANALYSIS_DIR, exist_ok=True)
 # 头部修正历史放在程序目录，跟着软件走，不受 skill 升级影响
 os.environ.setdefault("INSECT_HEAD_FIX",
                       os.path.join(ROOT, "data", "head_fix.jsonl"))
@@ -355,8 +359,19 @@ class Engine:
                 return True
             self.warm.update(state="loading", err="")
             try:
-                mask_head._seg_model(dev)
-                mask_head._kp_model(dev)
+                if dev == "cuda":
+                    try:
+                        import torch
+                        torch.backends.cudnn.benchmark = True
+                    except Exception:      # noqa: BLE001
+                        pass
+                # 两个模型并行读：串行约 6 s，并行约 4 s（都是纯 IO + 一次 CUDA 上传）
+                import concurrent.futures as _cf
+                with _cf.ThreadPoolExecutor(max_workers=2) as _ex:
+                    _f1 = _ex.submit(mask_head._seg_model, dev)
+                    _f2 = _ex.submit(mask_head._kp_model, dev)
+                    _f1.result()
+                    _f2.result()
                 self.warm.update(state="ready", dt=round(time.time() - t0, 2))
             except Exception as e:      # noqa: BLE001
                 self.warm.update(state="failed", err=f"{type(e).__name__}: {e}")
@@ -484,8 +499,20 @@ class Engine:
             except Exception:  # noqa: BLE001
                 pass
 
-        res = mask_head.analyze(prev, dev=self.model_dev, size=seg,
-                                want_head=True, progress=on_stage)
+        ck = ""
+        res = None
+        if self.cfg.get("mask_cache", True):
+            ck = self._analysis_key(path, seg)
+            res = self._load_analysis(ck)
+            if res is not None:
+                # 缓存命中也要把两帧照样推给界面，视觉上没差别
+                on_stage("mask", res["mask"], res["core"], res["full"], None)
+                on_stage("head", res["mask"], res["core"], res["full"], res.get("head"))
+        if res is None:
+            res = mask_head.analyze(prev, dev=self.model_dev, size=seg,
+                                    want_head=True, progress=on_stage)
+            if self.cfg.get("mask_cache", True) and res.get("ok"):
+                self._save_analysis(ck or self._analysis_key(path, seg), res)
         if not res.get("ok"):
             raise RuntimeError(res.get("reason", "mask_failed"))
 
@@ -503,6 +530,7 @@ class Engine:
 
         mask_name = self._save_mask(res["mask"], path)
         out = {"path": path, "batch": batch_name, "mask": mask_name,
+               "cached": bool(res.get("cached")),
                "fnumber": ex.get("fnumber"), "nsub": nsub,
                "meta": rawio.meta_text(ex),
                "head": head is not None,
@@ -619,6 +647,66 @@ class Engine:
         if not self.cfg.get("preview_enabled"):
             return False
         return (time.time() - self.last_ping) < 6.0
+
+    def _weights_sig(self):
+        """权重一变，缓存全部作废。"""
+        try:
+            fp = os.path.join(ROOT, "skill", "assets", "weights", "head_kp_v2.pth")
+            st = os.stat(fp)
+            return f"{int(st.st_mtime)}-{st.st_size}"
+        except OSError:
+            return "0"
+
+    def _analysis_key(self, path, seg, want_head=True):
+        try:
+            st = os.stat(path)
+        except OSError:
+            return ""
+        raw = f"{os.path.normcase(path)}|{st.st_mtime_ns}|{st.st_size}|{seg}|{int(want_head)}|{self._weights_sig()}"
+        return hashlib.sha1(raw.encode("utf-8", "ignore")).hexdigest()[:20]
+
+    def _load_analysis(self, key):
+        if not key:
+            return None
+        jf = os.path.join(ANALYSIS_DIR, key + ".json")
+        pf = os.path.join(ANALYSIS_DIR, key + ".png")
+        if not (os.path.exists(jf) and os.path.exists(pf)):
+            return None
+        try:
+            meta = json.load(open(jf, encoding="utf-8"))
+            mask = cv2.imdecode(np.fromfile(pf, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+            if mask is None:
+                return None
+            side = int(meta.get("mask_size") or meta.get("size") or 0)
+            if not side:
+                return None
+            if mask.shape[0] != side:
+                mask = cv2.resize(mask, (side, side), interpolation=cv2.INTER_LINEAR)
+            meta["mask"] = mask
+            meta["cached"] = True
+            return meta
+        except Exception:      # noqa: BLE001
+            return None
+
+    def _save_analysis(self, key, res):
+        if not key or not res.get("ok"):
+            return
+        try:
+            mask = res["mask"]
+            meta = {k: res[k] for k in ("ok", "size", "core", "full", "head",
+                                        "conf", "degraded") if k in res}
+            meta["mask_size"] = int(mask.shape[0])
+            meta["core"] = [float(v) for v in meta.get("core", [])]
+            meta["full"] = [float(v) for v in meta.get("full", [])]
+            if meta.get("head") is not None:
+                meta["head"] = [float(v) for v in meta["head"]]
+            json.dump(meta, open(os.path.join(ANALYSIS_DIR, key + ".json"), "w",
+                                 encoding="utf-8"), ensure_ascii=False)
+            ok, buf = cv2.imencode(".png", mask)
+            if ok:
+                buf.tofile(os.path.join(ANALYSIS_DIR, key + ".png"))
+        except Exception:      # noqa: BLE001
+            pass
 
     def _load_mask(self, name):
         if not name:
