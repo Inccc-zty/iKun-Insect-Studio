@@ -30,3 +30,6 @@ Thumbs.db
 _chk*/
 _tmp*/
 *.tmp
+
+# 归档的旧图，只在本地留档
+figures/_archive/
