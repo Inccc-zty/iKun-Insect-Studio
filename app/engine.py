@@ -34,8 +34,8 @@ sys.path.insert(0, os.path.join(SKILL, "scripts"))
 import crop_v3          # noqa: E402
 import exposure_model   # noqa: E402
 import head_fix         # noqa: E402
-import mask_head        # noqa: E402
 import wb_sharpen       # noqa: E402
+import mask_head        # noqa: E402
 import xmp_write        # noqa: E402
 
 from . import models, rawio, xmpio  # noqa: E402

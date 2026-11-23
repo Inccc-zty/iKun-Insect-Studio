@@ -25,7 +25,7 @@ DEFAULTS = {
     "preload": True,          # 启动后在后台把模型读进显存（省掉第一次点开始的 30–40 秒）
     "preview_enabled": True,  # UI 里的预览开关
     "preview_exposure": True, # 大图分屏显示「原图 | 按算出的 EV 调整后」
-    "mask_cache": True,       # 同一张图重跑时复用上次的掩膜/框/头点（不改结果）
+    "mask_cache": False,      # 同一张图重跑时复用上次的掩膜/框/头点（不改结果）
     "follow": True,           # 队列自动跟随正在处理的那张
     "head_fix": True,         # 用历史手动修正去微调头点（skill/scripts/head_fix.py）
     "backup": True,           # 覆盖旧 XMP 前备份

@@ -31,8 +31,8 @@ from .paths import app_root, skill_dir
 
 _SKILL = skill_dir()
 _sys.path.insert(0, os.path.join(_SKILL, "scripts"))
+import exposure_model
 import mask_head        # noqa: E402
-import exposure_model   # noqa: E402
 
 ROOT = app_root()
 OUT_ROOT = os.path.join(ROOT, "data")
