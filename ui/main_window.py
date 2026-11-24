@@ -126,6 +126,9 @@ TEXT = {
         "train_added": "已加入 {n} 个目录，点「开始训练」即可",
         "train_pause": "暂停训练", "train_resume": "继续训练",
         "train_remove": "从训练集里去掉这个文件夹",
+        "train_row": "{name}（{n} 张）",
+        "train_tip_files": "只训练你挑的这 {n} 张",
+        "train_tip_dir": "整个文件夹 {n} 张",
         "model_auto_switched": "已自动切到新训练的模型：{n}",
         "model_pick": "点这里选择要用的模型",
         "ver_now": "当前版本 {v}",
@@ -262,6 +265,9 @@ TEXT = {
         "train_added": "Added {n} folder(s); press Start training",
         "train_pause": "Pause", "train_resume": "Resume",
         "train_remove": "Remove this folder from the training set",
+        "train_row": "{name} ({n} photos)",
+        "train_tip_files": "Train only the {n} photos you picked",
+        "train_tip_dir": "The whole folder, {n} photos",
         "model_auto_switched": "Switched to the newly trained model: {n}",
         "model_pick": "Click to pick a model",
         "ver_now": "Version {v}",
@@ -1943,6 +1949,17 @@ class MainWindow(QMainWindow):
         except Exception:      # noqa: BLE001
             pass
         self.about.setHtml(self._about_html())
+        try:
+            from app.version import VERSION
+            self.l_ver.setText(self._t("ver_now", v=VERSION))
+            if not self.l_upd.text():
+                pass
+        except Exception:      # noqa: BLE001
+            pass
+        if not self._tasks:
+            self.l_cur.setText(self._t("no_sel"))
+        self.l_hint.setText(self._t("drop"))
+        self._refresh_train_list()
         self._update_legend()
         self._refresh_list()
         self._refresh_head()
@@ -2410,15 +2427,15 @@ class MainWindow(QMainWindow):
                 n = e["n"]
             name = os.path.basename(e["dir"].rstrip("\\/")) or e["dir"]
             it = QListWidgetItem()
-            it.setToolTip(f"{e['dir']}\n" + (f"只训练选中的 {n} 张" if e.get("files")
-                                              else f"整个文件夹 {n} 张"))
+            it.setToolTip(f"{e['dir']}\n" + (self._t("train_tip_files", n=n) if e.get("files")
+                                              else self._t("train_tip_dir", n=n)))
             it.setSizeHint(QSize(120, 26))
             self.train_list.addItem(it)
             holder = QWidget()
             hb = QHBoxLayout(holder)
             hb.setContentsMargins(4, 0, 2, 0)
             hb.setSpacing(4)
-            lab = QLabel(f"{name}（{n} 张）")
+            lab = QLabel(self._t("train_row", name=name, n=n))
             hb.addWidget(lab, 1)
             btn = QToolButton()
             btn.setText("×")
