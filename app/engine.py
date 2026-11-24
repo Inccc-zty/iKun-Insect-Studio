@@ -429,6 +429,7 @@ class Engine:
 
             task.state = "running"
             task.t0 = time.time()
+            _pv0 = self.preview_seconds
             try:
                 self._ensure_models()
                 task.result = self._process(task.path)
@@ -463,6 +464,10 @@ class Engine:
                     traceback.print_exc()
             task.t1 = time.time()
             dt = task.t1 - task.t0
+            try:
+                _perf_log(task.path, dt, self.preview_seconds - _pv0)
+            except Exception:      # noqa: BLE001
+                pass
             with self.lock:
                 self.durations.append(dt)
                 self.durations = self.durations[-30:]
@@ -987,3 +992,18 @@ class Engine:
     def all_results(self):
         with self.lock:
             return [dict(t.result) for t in self.tasks if t.result]
+
+
+def _perf_log(path, total, preview):
+    """每张一行：总耗时、预览耗时、其余（读 RAW + 分割 + 头点 + 写 xmp）。
+    写在 <程序目录>/data/perf.log，用来定位"为什么这张 7 秒"。"""
+    import os as _os
+    from .paths import data_dir
+    line = "%s\t总 %.2fs\t预览 %.2fs\t其余 %.2fs\t%s\n" % (
+        time.strftime("%Y-%m-%d %H:%M:%S"), total, preview,
+        max(total - preview, 0.0), _os.path.basename(path))
+    try:
+        with open(_os.path.join(data_dir(), "perf.log"), "a", encoding="utf-8") as f:
+            f.write(line)
+    except Exception:      # noqa: BLE001
+        pass

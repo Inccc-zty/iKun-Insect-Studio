@@ -1205,6 +1205,12 @@ class MainWindow(QMainWindow):
         self.chk_ev = QCheckBox(self._t("ev_prev"))
         self.chk_ev.setChecked(bool(self.cfg.get("preview_exposure", True)))
         self.chk_ev.setToolTip(self._t("ev_prev_tip"))
+        if not self.chk_prev.isChecked():
+            self._ev_prev_memo = bool(self.cfg.get("preview_exposure", True))
+            self.chk_ev.blockSignals(True)
+            self.chk_ev.setChecked(False)
+            self.chk_ev.blockSignals(False)
+            self.chk_ev.setEnabled(False)
         self.chk_ev.stateChanged.connect(self._evprev_toggle)
 
         # 两个开关并排，说明合成一行放它们下面
@@ -1918,6 +1924,12 @@ class MainWindow(QMainWindow):
         self.l_slow.setText(self._t("slow_hint"))
         self.chk_ev.setText(self._t("ev_prev"))
         self.chk_ev.setToolTip(self._t("ev_prev_tip"))
+        if not self.chk_prev.isChecked():
+            self._ev_prev_memo = bool(self.cfg.get("preview_exposure", True))
+            self.chk_ev.blockSignals(True)
+            self.chk_ev.setChecked(False)
+            self.chk_ev.blockSignals(False)
+            self.chk_ev.setEnabled(False)
         self.l_xmp.setText(self._t("xmp"))
         self.cb_policy.setToolTip(self._t("policy_tip"))
         self.l_edit.setText(self._t("edit_hint"))
@@ -2327,7 +2339,25 @@ class MainWindow(QMainWindow):
         return name if len(name) <= n else name[: n - 1] + "…"
 
     def _preview_toggle(self):
-        self.cfg.update(preview_enabled=self.chk_prev.isChecked())
+        """实时预览关掉时，曝光预览也跟着关；再打开时恢复成上次的样子。"""
+        on = self.chk_prev.isChecked()
+        self.cfg.update(preview_enabled=on)
+        if not on:
+            self._ev_prev_memo = self.chk_ev.isChecked()
+            self.chk_ev.blockSignals(True)
+            self.chk_ev.setChecked(False)
+            self.chk_ev.blockSignals(False)
+            self.chk_ev.setEnabled(False)
+            self.cfg.update(preview_exposure=False)
+        else:
+            want = bool(getattr(self, "_ev_prev_memo",
+                                self.cfg.get("preview_exposure", True)))
+            self.chk_ev.setEnabled(True)
+            self.chk_ev.blockSignals(True)
+            self.chk_ev.setChecked(want)
+            self.chk_ev.blockSignals(False)
+            self.cfg.update(preview_exposure=want)
+        self._last_preview = None
 
     def _evprev_toggle(self):
         """开关一变，当前这张立刻重画——不然看着就像没生效。"""
