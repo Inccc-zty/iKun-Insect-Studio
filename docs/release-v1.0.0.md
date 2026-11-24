@@ -24,7 +24,7 @@
 两个分卷加起来 2.6 GB（GitHub 单文件上限 2 GB）：
 
 1. 下载 `iKunInsectStudio_v1.0.0.zip.001` 和 `.002`，放同一个文件夹
-2. 双击 `合并成一个zip.bat`，得到 `iKunInsectStudio_v1.0.0.zip`
+2. 双击 `join-parts.bat`，得到 `iKunInsectStudio_v1.0.0.zip`
 3. 解压 → 双击 `iKunInsectStudio.exe`（**整个文件夹要一起留着**，不能只拷 exe）
 
 **百度网盘备用**（提取码 8848）：https://pan.baidu.com/s/1jU0VFZo8SVXKQgvZ83TGPg?pwd=8848
