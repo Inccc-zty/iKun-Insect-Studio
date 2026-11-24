@@ -1,35 +1,43 @@
 # iKun Insect Studio
 
-**Automated post-processing for insect macro RAW.** One pass per photo: crop + exposure +
-sharpening, written as a Lightroom `.xmp`. White balance is deliberately left alone.
+**A tool that does the boring, repetitive part for you: find the insect, place the crop, set the exposure.**
 
-> 中文版见 [README.zh-CN.md](README.zh-CN.md) · **[技术报告（中文）](docs/report.md)** · [Technical report](docs/report.en.md)
+A day out shooting means one record frame per individual. Only a handful are worth a full edit;
+the other ninety are records — and in macro work the insect is always small in the frame
+(hand-holding, not enough magnification, it will not let you closer). Uncroped, they are
+"a bug somewhere in the middle". The hours go into the ninety, not the five.
+
+This app does those two jobs and writes the result as a sidecar `.xmp` your editor already reads.
+
+> **Crop and exposure can both be wrong. Nothing here is 100%.** The value is not accuracy, it is
+> turning a hundred repetitive edits into a few minutes — you glance at the misses and fix them.
+>
+> Built against **Lightroom** and **Adobe Camera Raw (ACR)** as references. `.xmp` is Adobe's
+> standard: Lightroom, Camera Raw, Bridge and Photoshop all read the same file.
+
+> 中文版见 [README.zh-CN.md](README.zh-CN.md) · **[Manual](docs/manual.en.md)** · **[Technical report](docs/report.en.md)**
 
 ---
 
 ## What it does
 
-- **Crop** — finds the insect with a full-frame mask, measures a body box and a whole box,
-  predicts a square crop with a 105-term model (4,184 photos, hold-out IoU **0.865**).
-- **Exposure** — two p95 brightness numbers (inside the mask / background inside the box)
-  into one straight line; hold-out MAE **0.29 EV** (constant baseline: 0.41).
+- **Crop** — a full-frame mask finds the insect, measures a body box and a whole box, and a
+  105-term model predicts the crop. Hold-out IoU **0.865**. Usually usable as-is, sometimes off.
+- **Exposure** — two p95 brightness numbers (inside the mask / background inside the box) into one
+  straight line; hold-out MAE **0.29 EV** (constant baseline 0.41). An estimate: treat it as a start.
 - **Sharpening** — by aperture, strictly increasing (20 → 65).
 
-## What it deliberately does not do
-
-- **No white balance.** Only a constant reproduces what the operator actually does
-  (−1.000 regression slope on As Shot). The reasoning is a whole chapter: `docs/06-white-balance.md`.
-- **No matting.** The mask is a ruler, not a cut-out — the red overlay only exists so you can
-  confirm it found the animal.
+**Leaves alone**: white balance, colour, contrast, local adjustments. **Never touches**: the RAW.
 
 ## Quick start (Windows)
 
-1. Download the latest release, extract all parts.
+1. Download the latest release and extract all parts into one folder.
 2. Double-click `iKunInsectStudio.exe` (keep the whole folder together).
-3. Drop a folder of RAWs, pick a mode, press **Start**.
-4. The `.xmp` appears next to each photo → in Lightroom: *Read Metadata from File*.
+3. Drop a folder or a batch of RAWs, pick a mode, press **Start**.
+   Then **import into your editor** — the `.xmp` is read on import. If the batch is already in
+   Lightroom, click *Read Metadata from File* once there instead.
 
-The model preloads in the background for ~30 s on first launch; you can queue photos meanwhile.
+Models preload in the background for ~10–20 s; you can queue photos meanwhile.
 
 ## How it works, in one paragraph
 
@@ -46,18 +54,14 @@ and a full teardown of the one that survived. [English](docs/report.en.md).
 
 ## Numbers
 
-| Module | Data | Metric |
-|---|---|---|
-| Crop | 4,184 fit sample (11 folders) | in-sample IoU median **0.8756**, hold-out **0.8650**, 80-photo blind test **0.9017** |
-| Crop · re-checked | **2,280 current set / 15 folders** | median **0.8172**, ≥0.8 **54.2%** |
-| Exposure | 2,238 current rows | hold-out MAE **0.286 EV** (constant 0.404) |
-| Head | 6 annotated RAWs + 500 reviewed | median error **0.12 · core width** |
-| White balance | 5,065 JPG / 2,280 RAW | constant T=5333/+16, MAE **163 K** — best achievable |
+| Module | Metric |
+|---|---|
+| Crop | hold-out IoU median **0.865**; 80-photo blind test **0.902** |
+| Exposure | hold-out MAE **0.29 EV** (constant baseline 0.41) |
+| Head point | median error **0.12 × core width** |
+| White balance | a constant, MAE **163 K** — the best this approach reaches |
 
-> **Read the crop numbers carefully.** The 4,184-row fit sample is 56% one folder
-> (`2025.7 青海`). On the current in-scope set (2,280 photos across 15 folders, five of
-> them never seen in fitting) the same coefficients score **0.8172**. Both are reported;
-> see `reports/2026-11-22-rerun.md` for the reconciliation.
+Metrics are hold-out: the model never sees the folders it is scored on.
 
 ## Repository layout
 

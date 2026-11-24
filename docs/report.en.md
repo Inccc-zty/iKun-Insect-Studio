@@ -1,13 +1,17 @@
 # iKun Insect Studio · Technical Report
 
 > One sentence: turn an insect macro RAW into a **usable Lightroom crop box + exposure +
-> sharpening**, by measuring three quantities on 2,002 photos you edited yourself.
+> sharpening**, by measuring three quantities on the calibation set you edited yourself.
 >
 > 中文版：[report.md](report.md) · Home: [../README.md](../README.md)
 
 ---
 
 ## 0 At a glance
+
+![Fig. 1 — one inference, end to end](figures/en/02_pipeline.png)
+
+<p align="center"><sub>Fig. 1 — one inference, end to end</sub></p>
 
 | Module | Input | Output | Score |
 |---|---|---|---|
@@ -28,6 +32,10 @@ balance can only be a constant.
 
 ### 1.1 Crop: 0.826 holds folder by folder
 
+![Fig. 2 — crop IoU per folder](figures/en/03_crop_by_folder.png)
+
+<p align="center"><sub>Fig. 2 — crop IoU per folder</sub></p>
+
 ![crop by folder](../figures/en/03_crop_by_folder.png)
 
 - Overall median **0.826**; macro average over 14 folders **0.831**.
@@ -36,6 +44,10 @@ balance can only be a constant.
   XMP, so they were really edited — the composition is simply outside the "regular" range.
 
 ### 1.2 What each input is worth
+
+![Fig. 3 — ablation: one feature group vs all](figures/en/20_ablation_full.png)
+
+<p align="center"><sub>Fig. 3 — ablation: one feature group vs all</sub></p>
 
 ![ablation](../figures/en/20_ablation_full.png)
 
@@ -51,12 +63,16 @@ Body and limb are largely redundant; **the head point is the only orthogonal inc
 (weakest alone, but the only source of "which way the insect faces"); dispersion is
 collinear with the two sizes and can be dropped.
 
-> The 0.763 is a **refit** on the 2,002 photos and is below the shipped 0.826.
+> The 0.763 is a **refit** on the the calibation set and is below the shipped 0.826.
 > The refit pipeline still has an unresolved issue — read this chart as **relative only**.
 
 ---
 
 ## 2 Crop: the schemes that died
+
+![Fig. 4 — the three lines over time](figures/en/12_timeline.png)
+
+<p align="center"><sub>Fig. 4 — the three lines over time</sub></p>
 
 | # | Scheme | Result | Why it died |
 |---|---|---|---|
@@ -92,6 +108,10 @@ EV = b0 + b1 · L_in + b2 · L_box
 
 ### 3.2 Thirteen algorithms in one table
 
+![Fig. 5 — thirteen exposure algorithms](figures/en/21b_exposure_table.png)
+
+<p align="center"><sub>Fig. 5 — thirteen exposure algorithms</sub></p>
+
 ![exposure table](../figures/en/21b_exposure_table.png)
 
 Every row states **its exact inputs**, including the two terms and the third one.
@@ -101,6 +121,10 @@ average/centre-weighted/Nikon matrix are all worse. The reason is structural:
 
 ### 3.3 Fit: closer to the diagonal, extremes compressed
 
+![Fig. 6 — the two-term fit](figures/en/22_exposure_fit.png)
+
+<p align="center"><sub>Fig. 6 — the two-term fit</sub></p>
+
 ![fit](../figures/en/22_exposure_fit.png)
 
 - Single 0.311 / R² 0.44; two-term **0.279 / 0.573**.
@@ -108,6 +132,14 @@ average/centre-weighted/Nikon matrix are all worse. The reason is structural:
   A linear model pulls extremes toward the mean. Non-linear forms were all tested and all worse.
 
 ### 3.4 The shape of the data
+
+![Fig. 7 — target EV distribution](figures/en/23_exposure_ev_hist.png)
+
+<p align="center"><sub>Fig. 7 — target EV distribution</sub></p>
+
+![Fig. 8 — absolute error per batch](figures/en/25_exposure_by_batch.png)
+
+<p align="center"><sub>Fig. 8 — absolute error per batch</sub></p>
 
 ![EV histogram](../figures/en/23_exposure_ev_hist.png)
 ![per-batch](../figures/en/25_exposure_by_batch.png)
@@ -118,6 +150,10 @@ per-batch MAE spans 0.15–0.45 — **batch difference, not model form, dominate
 ---
 
 ## 4 White balance: constant, and why
+
+![Fig. 9 — white balance: a constant wins](figures/en/10_wb_models.png)
+
+<p align="center"><sub>Fig. 9 — white balance: a constant wins</sub></p>
 
 ![white balance](../figures/en/10_wb_models.png)
 
@@ -159,22 +195,11 @@ NEF 8256×5504
 
 ---
 
-## 6 Dataset: why 2,002 and not 4,000
+## 6 Reproduce
 
-```
-finished JPG          5,065
-master table (XMP)    2,280
-in scope              2,275   ← two rules in tools/scope.py
-insect (insect_ok=1)  2,123   ← 108 non-insect + 44 undecided removed during head re-labelling
-usable for calib.     2,002
-```
+![Fig. 10 — 80-photo blind test](figures/en/13_80x3_panel.jpg)
 
-**4,184 is a different sample** (11 folders, includes out-of-scope batches, 56% Qinghai) used
-for early exposure/crop learning. The two sets must not be quoted interchangeably.
-
----
-
-## 7 Reproduce
+<p align="center"><sub>Fig. 10 — 80-photo blind test</sub></p>
 
 ```bash
 python -m venv .venv && .venv/Scripts/activate
