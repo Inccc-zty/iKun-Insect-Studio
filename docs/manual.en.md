@@ -191,3 +191,44 @@ A: 1–3 s per photo on a GPU; faster with live preview off.
 3. **Exposure is an estimate.** Large moves (±1.5 EV and beyond) drift; use it as a starting point.
 4. **Small insects drift.** When the insect is under 8% of the frame width the mask blurs and the
    box can be off — check those frames.
+
+---
+
+## 10 Why it is 4.4 GB
+
+Unzip it and you get a 4.4 GB folder with **not a single photo** in it. The breakdown:
+
+| Part | Size | What it is |
+|---|---|---|
+| PyTorch + CUDA runtime | **~3.9 GB** | the libraries that let the models run on the GPU |
+| Model weights | ~420 MB | segmentation model + head keypoint model |
+| Qt, OpenCV, image decoding | ~200 MB | the window, RAW reading, preview rendering |
+| Scripts and config | a few MB | the actual logic |
+
+### What those 3.9 GB are
+
+| File | Size | Job | Removable? |
+|---|---|---|---|
+| `torch_cuda.dll` | 1.33 GB | GPU kernels | no, core |
+| `cudnn_engines_precompiled` | 563 MB | convolution kernels | no — removing it costs 10× speed or breaks outright |
+| `cublasLt` | 519 MB | matrix multiply | no |
+| `cusolver / cufft / cusparse` | 817 MB | solvers, FFT, sparse | **no** — `torch_cuda.dll` imports them statically; remove them and `import torch` fails (tested) |
+| `torch_cpu.dll` | 241 MB | CPU fallback kernels | no |
+
+### Why CUDA at all
+
+Without it everything runs on CPU: **0.3 s → 5–10 s per photo**, i.e. an extra hour on a 500-frame batch.
+Not a good trade, so the CUDA build is the default.
+
+### Could it be smaller
+
+Yes, by changing the inference engine:
+
+| Option | Size | Cost |
+|---|---|---|
+| Current (PyTorch + CUDA) | 4.4 GB | — |
+| ONNX Runtime (CUDA) | ~1.8 GB | export both models, verify accuracy frame by frame |
+| ONNX Runtime (CPU) | ~0.8 GB | tiny, but 5 s per photo and up |
+
+Not done yet: **these coefficients were calibrated on PyTorch**, so switching engines means re-validating
+accuracy, not just swapping a library.
