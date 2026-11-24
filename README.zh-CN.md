@@ -1,6 +1,9 @@
 # iKun Insect Studio · 昆虫自动化后期
 
+**[下载](https://github.com/Inccc-zty/iKun-Insect-Studio/releases)** ·
 **[使用说明](docs/manual.md)** · **[技术报告](docs/report.md)** · [English](README.md)
+
+![iKun Insect Studio 中文界面，一批照片刚跑完](docs/media/hero.zh.png)
 
 **一个替你做无聊重复动作的工具：找虫、定框、给曝光。**
 

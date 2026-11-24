@@ -6,6 +6,14 @@
 
 Drop a folder → mask, boxes and head point appear per photo → an `.xmp` lands beside every RAW.
 
+**Download**: [GitHub Releases](https://github.com/Inccc-zty/iKun-Insect-Studio/releases) ·
+Baidu Netdisk mirror (link in the announcement on the repo front page)
+
+The release ships two parts, `iKunInsectStudio_v1.0.0.zip.001` / `.002` — the whole package is 2.6 GB,
+above GitHub's 2 GB per-file limit. Put both in one folder, run `合并成一个zip.bat`, then unzip.
+
+
+
 ---
 
 # iKun Insect Studio · Manual
@@ -184,9 +192,33 @@ built-in model and you can switch back at any time.
 
 ---
 
-## 8 The interface
+## 8 What the screens look like
 
-(to be filled with the Process / Train / About screenshots)
+**On launch**: the queue is on the left — drop folders or photos anywhere in the window. Preview and
+contact sheet on the right.
+
+![On launch](media/start.en.png)
+
+**Running**: mask (red), whole box (yellow), body box (blue), crop (green), head point (circle).
+
+![Running](media/running.zh.png)
+
+**When it finishes**: every row shows EV, crop width and sharpening; the right side lets you nudge a
+frame, with the contact sheet below.
+
+![A batch just finished](media/hero.en.png)
+
+Dark mode:
+
+![Dark mode](media/dark.en.png)
+
+**Train tab**: add folders (the count is what you picked), pause, and read the log.
+
+![Train tab](media/train.en.png)
+
+**About tab**: version, update check, and what each module actually is.
+
+![About tab](media/about.en.png)
 
 ---
 

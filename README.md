@@ -1,6 +1,9 @@
 # iKun Insect Studio
 
+**[Download](https://github.com/Inccc-zty/iKun-Insect-Studio/releases)** ·
 **[Manual](docs/manual.en.md)** · **[Technical report](docs/report.en.md)** · [中文](README.zh-CN.md)
+
+![iKun Insect Studio, English interface, a batch just finished](docs/media/hero.en.png)
 
 **A tool that does the boring, repetitive part for you: find the insect, place the crop, set the exposure.**
 
