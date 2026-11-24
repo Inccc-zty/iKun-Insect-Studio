@@ -128,6 +128,14 @@ TEXT = {
         "train_remove": "从训练集里去掉这个文件夹",
         "model_auto_switched": "已自动切到新训练的模型：{n}",
         "model_pick": "点这里选择要用的模型",
+        "ver_now": "当前版本 {v}",
+        "check_update": "检查更新",
+        "open_release": "打开下载页",
+        "upd_checking": "正在检查…",
+        "upd_fail": "检查失败（网络不通，或还没发布过版本）",
+        "upd_latest": "已是最新（{v}）",
+        "upd_new": "有新版本 {v}，点「打开下载页」",
+        "upd_title": "发现新版本",
         "train_clear_title": "清空训练列表",
         "train_clear_ask": "要从训练集里移除全部 {n} 个文件夹吗？\n照片不会被删除，只是不参加这次训练。",
         "train_added_dup": "这些目录已经在列表里了",
@@ -256,6 +264,14 @@ TEXT = {
         "train_remove": "Remove this folder from the training set",
         "model_auto_switched": "Switched to the newly trained model: {n}",
         "model_pick": "Click to pick a model",
+        "ver_now": "Version {v}",
+        "check_update": "Check for updates",
+        "open_release": "Open download page",
+        "upd_checking": "Checking…",
+        "upd_fail": "Check failed (offline, or nothing published yet)",
+        "upd_latest": "Up to date ({v})",
+        "upd_new": "Version {v} is available — open the download page",
+        "upd_title": "Update available",
         "train_clear_title": "Clear the training list",
         "train_clear_ask": "Remove all {n} folders from the training set?\nNo photos are deleted — they just drop out of this run.",
         "train_added_dup": "Those folders are already in the list",
@@ -519,6 +535,18 @@ class QueueDelegate(QStyledItemDelegate):
         st = self.win._t("st_edit") if r.get("manual_crop") else self.win._t("st_ok")
         return " · ".join(bits), st, self.ok_color if not r.get("manual_crop") \
             else ("#c98a2a" if not selected else "#f0c987")
+
+
+class _UpdWorker(QThread):
+    """后台查一次 GitHub，不卡界面。"""
+    done = Signal(dict)
+
+    def run(self):
+        try:
+            from app import update
+            self.done.emit(update.check())
+        except Exception as e:      # noqa: BLE001
+            self.done.emit({"ok": False, "error": str(e)})
 
 
 class DropList(QListWidget):
@@ -1511,8 +1539,26 @@ class MainWindow(QMainWindow):
         p.setMinimumHeight(p.layout().sizeHint().height())
 
     def _tab_about(self):
+        from app.version import VERSION
         w = QWidget()
         v = QVBoxLayout(w)
+        row = QHBoxLayout()
+        row.setSpacing(10)
+        self.l_ver = QLabel(self._t("ver_now", v=VERSION))
+        self.l_ver.setObjectName("fieldLabel")
+        self.b_update = _mini(QPushButton(self._t("check_update")))
+        self.b_update.setObjectName("ghost")
+        self.b_update.clicked.connect(lambda: self._check_update(False))
+        self.b_open_rel = _mini(QPushButton(self._t("open_release")))
+        self.b_open_rel.setObjectName("ghost")
+        self.b_open_rel.hide()
+        self.l_upd = QLabel("")
+        self.l_upd.setObjectName("hint")
+        row.addWidget(self.l_ver)
+        row.addWidget(self.b_update)
+        row.addWidget(self.b_open_rel)
+        row.addWidget(self.l_upd, 1)
+        v.addLayout(row)
         self.about = QTextEdit()
         self.about.setReadOnly(True)
         self.about.setObjectName("log")
@@ -1525,6 +1571,43 @@ class MainWindow(QMainWindow):
         self.about.setHtml(self._about_html())
         v.addWidget(self.about)
         return w
+
+    def _check_update(self, silent=True):
+        if getattr(self, "_upd_worker", None) is not None and self._upd_worker.isRunning():
+            return
+        if not silent:
+            self.l_upd.setText(self._t("upd_checking"))
+        self._upd_worker = _UpdWorker(self)
+        self._upd_worker.done.connect(lambda d: self._on_update(d, silent))
+        self._upd_worker.start()
+
+    def _on_update(self, d, silent):
+        import time as _t
+        self.cfg.update(update_checked_at=_t.time())
+        if not d.get("ok"):
+            self.l_upd.setText(self._t("upd_fail"))
+            if not silent:
+                self.status.showMessage(self._t("upd_fail"), 6000)
+            return
+        self.cfg.update(update_latest=d.get("latest", ""))
+        if not d.get("newer"):
+            self.l_upd.setText(self._t("upd_latest", v=d.get("latest", "")))
+            if not silent:
+                self.status.showMessage(self._t("upd_latest", v=d.get("latest", "")), 6000)
+            return
+        self.l_upd.setText(self._t("upd_new", v=d.get("latest")))
+        self.b_open_rel.show()
+        url = d.get("page") or ""
+        try:
+            self.b_open_rel.clicked.disconnect()
+        except Exception:      # noqa: BLE001
+            pass
+        self.b_open_rel.clicked.connect(lambda: __import__("webbrowser").open(url))
+        if silent:
+            self._toast(self._t("upd_new", v=d.get("latest")), 15000)
+        else:
+            QMessageBox.information(self, self._t("upd_title"),
+                                    self._t("upd_new", v=d.get("latest")) + "\n\n" + url)
 
     def _about_html(self):
         en = self._lang == "en"
@@ -2474,6 +2557,12 @@ class MainWindow(QMainWindow):
         self._refresh_head()
         self._apply_theme("light")
         self._retranslate()
+        try:
+            import time as _t
+            if _t.time() - float(self.cfg.get("update_checked_at") or 0) > 86400:
+                QTimer.singleShot(4000, lambda: self._check_update(True))
+        except Exception:      # noqa: BLE001
+            pass
 
     # ---------------------------------------------------------------- 模型（系数）
     def _refresh_models(self):
