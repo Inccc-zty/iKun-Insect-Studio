@@ -93,6 +93,7 @@ The app only puts the crop and the exposure on the sliders.
 3. First launch loads the models in 10–20 s; **the window appears first and the models load in the
    background**, so you can queue photos immediately
 4. To reset: close the app, double-click `重置到初始状态.bat` in the same folder
+   (**models you trained or imported are kept**; only settings and caches are cleared — use `--reset-all` to wipe those too)
 
 > An NVIDIA GPU (4 GB+) is recommended. CPU works too, at 5–10 s per photo.
 
