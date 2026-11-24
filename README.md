@@ -32,7 +32,7 @@ This app does those two jobs and writes the result as a sidecar `.xmp` your edit
   straight line; hold-out MAE **0.29 EV** (constant baseline 0.41). An estimate: treat it as a start.
 - **Sharpening** — by aperture, strictly increasing (20 → 65).
 
-**Leaves alone**: white balance, colour, contrast, local adjustments. **Never touches**: the RAW.
+**Writes a sidecar `.xmp`**: the RAW stays as shot, and your white balance, colour and contrast carry over as they are — everything applies on import.
 
 ## Quick start (Windows)
 

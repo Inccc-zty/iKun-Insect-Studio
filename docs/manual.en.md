@@ -119,13 +119,16 @@ The app only puts the crop and the exposure on the sliders.
 
 ---
 
-## 5 What it changes, and what it does not
+## 5 The three numbers it writes
 
-| | |
+| Written to `.xmp` | What |
 |---|---|
-| **Changes** | crop box (position + size), exposure EV, sharpening amount |
-| **Leaves alone** | white balance, colour, contrast, local adjustments |
-| **Never touches** | the RAW. Only a sidecar `.xmp` |
+| **Crop box** | position + size |
+| **Exposure** | one EV value |
+| **Sharpening** | amount for that aperture |
+
+They go into the sidecar `.xmp` next to the photo and apply on import; the RAW stays as shot and your
+white balance, colour and contrast carry over as they are.
 
 Where the three numbers come from:
 
