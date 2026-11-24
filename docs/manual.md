@@ -13,11 +13,10 @@
 
 拖入文件夹 → 逐张出掩膜、框、头点 → 结束时在每张 RAW 旁边写一个 `.xmp`。全程不用点第二次。
 
-**下载**：[GitHub Releases](https://github.com/Inccc-zty/iKun-Insect-Studio/releases) ·
-百度网盘（链接见仓库首页公告）
+**下载**：[百度网盘](https://pan.baidu.com/s/1jU0VFZo8SVXKQgvZ83TGPg?pwd=8848)（提取码 **8848**）
 
-Release 里是两个分卷 `iKunInsectStudio_v1.0.0.zip.001` / `.002`（整包 2.6 GB，超过 GitHub 单文件 2 GB 限制）。
-两个都下下来放同一个文件夹，双击 `合并成一个zip.bat`，得到 `iKunInsectStudio_v1.0.0.zip`，解压即用。
+文件是 `iKunInsectStudio.zip`，约 2.6 GB。下载后解压，得到 `iKunInsectStudio` 文件夹，
+双击里面的 `iKunInsectStudio.exe` 即可 —— **整个文件夹要一起留着**，不能只拷 exe。
 
 
 

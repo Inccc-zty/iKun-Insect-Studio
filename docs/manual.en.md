@@ -6,11 +6,10 @@
 
 Drop a folder → mask, boxes and head point appear per photo → an `.xmp` lands beside every RAW.
 
-**Download**: [GitHub Releases](https://github.com/Inccc-zty/iKun-Insect-Studio/releases) ·
-Baidu Netdisk mirror (link in the announcement on the repo front page)
+**Download**: [Baidu Netdisk](https://pan.baidu.com/s/1jU0VFZo8SVXKQgvZ83TGPg?pwd=8848) (code **8848**)
 
-The release ships two parts, `iKunInsectStudio_v1.0.0.zip.001` / `.002` — the whole package is 2.6 GB,
-above GitHub's 2 GB per-file limit. Put both in one folder, run `合并成一个zip.bat`, then unzip.
+The file is `iKunInsectStudio.zip`, about 2.6 GB. Unzip it, keep the whole `iKunInsectStudio` folder
+together, and run `iKunInsectStudio.exe` — do not copy the exe out on its own.
 
 
 
