@@ -84,7 +84,8 @@ TEXT = {
         "eta_hm": "剩余 {m}:{s:02d}", "eta_s": "剩余 {s} 秒", "eta_na": "剩余 —",
         "st_ok": "完成", "st_fail": "失败", "st_skip": "跳过",
         "st_manual": "跳过·你修的", "st_exists": "跳过·已有",
-        "st_edit": "手调", "st_fallback": "系数退回内置",
+        "st_edit": "微调", "st_fallback": "系数退回内置",
+        "head_dbl_hint": "这张没标到头：拖一下头点，点「完成」即可",
         "no_write": "不写",
         "edit_hint": "微调：拖框边/角",
         "edit_tip": "拖框边/角改大小，拖框内移动；改身体或整体会自动重算裁切；完成后写回 XMP",
@@ -203,7 +204,8 @@ TEXT = {
         "eta_hm": "ETA {m}:{s:02d}", "eta_s": "ETA {s}s", "eta_na": "ETA —",
         "st_ok": "Done", "st_fail": "Failed", "st_skip": "Skipped",
         "st_manual": "skip·manual", "st_exists": "skip·exists",
-        "st_edit": "edited", "st_fallback": "fallback to built-in",
+        "st_edit": "fine-tuned", "st_fallback": "fallback to built-in",
+        "head_dbl_hint": "No head point on this one: drag it, then press Done",
         "no_write": "not set",
         "edit_hint": "Drag edges/corners",
         "edit_tip": "Drag edges/corners to resize, inside to move; body/full changes refit the crop; Apply writes XMP",
@@ -545,6 +547,8 @@ class Preview(QWidget):
     edited = Signal(str)
     committed = Signal()
     cancelled = Signal()
+    dbl = Signal()            # 双击：没标头就进微调
+    dropped = Signal(list)    # 往画布上拖照片/文件夹
 
     def __init__(self, text=""):
         super().__init__()
@@ -750,6 +754,21 @@ class Preview(QWidget):
             "rt": Qt.SizeBDiagCursor, "lb": Qt.SizeBDiagCursor,
             "move": Qt.SizeAllCursor,
         }.get(part, Qt.ArrowCursor)
+
+    def mouseDoubleClickEvent(self, e):
+        """双击画布：如果这张还没标头，直接进微调去标。"""
+        if not self.boxes and e.button() == Qt.LeftButton:
+            self.dbl.emit()
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasUrls():
+            e.acceptProposedAction()
+
+    def dropEvent(self, e):
+        paths = [u.toLocalFile() for u in e.mimeData().urls() if u.isLocalFile()]
+        if paths:
+            self.dropped.emit(paths)
+        e.acceptProposedAction()
 
     def mousePressEvent(self, e):
         if not self.boxes or e.button() != Qt.LeftButton:
@@ -1185,6 +1204,8 @@ class MainWindow(QMainWindow):
         self.preview.edited.connect(self._on_edit_changed)
         self.preview.committed.connect(self._commit_edit)
         self.preview.cancelled.connect(self._cancel_edit)
+        self.preview.dbl.connect(self._preview_dbl)
+        self.preview.dropped.connect(self._on_paths)
         tlay.addWidget(self.preview, 1)
 
         # 当前这张的一行数字
@@ -1974,6 +1995,24 @@ class MainWindow(QMainWindow):
         self.l_state.setText(text)
 
     # ---------------------------------------------------------------- 手动微调
+    def _preview_dbl(self):
+        """双击：没标头就进微调，并把焦点放在头点上。"""
+        if self.preview.is_editing():
+            return
+        row = self.list.currentRow()
+        if not (0 <= row < len(self._tasks)):
+            return
+        t = self._tasks[row]
+        if (t.result or {}).get("head_xy"):
+            return
+        self._begin_edit(t)
+        try:
+            self.preview._active = "head"
+            self.preview.update()
+        except Exception:      # noqa: BLE001
+            pass
+        self.status.showMessage(self._t("head_dbl_hint"), 5000)
+
     def _begin_edit(self, t):
         if self._edit_task is t:
             return
@@ -2546,7 +2585,8 @@ class MainWindow(QMainWindow):
             self.l_hint.setText(self._t("warming"))
         else:
             self.l_hint.setText(self._t("drop"))
-        if cur and self.chk_follow.isChecked() and not self.preview.is_editing():
+        if (cur and st.get("running") and self.chk_follow.isChecked()
+                and not self.preview.is_editing()):
             row = self._row_of(cur)
             if row is not None and self.list.currentRow() != row:
                 self.list.blockSignals(True)
