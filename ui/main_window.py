@@ -1271,7 +1271,7 @@ class MainWindow(QMainWindow):
         self.legend_holder = QWidget()
         self.legend_layout = QHBoxLayout(self.legend_holder)
         self.legend_layout.setContentsMargins(0, 0, 0, 0)
-        self.legend_layout.setSpacing(14)
+        self.legend_layout.setSpacing(16)
         lh.addWidget(self.legend_holder)
         tlay.addLayout(lh)
 
@@ -1641,16 +1641,16 @@ class MainWindow(QMainWindow):
         cl = "#272d2e" if dark else "#e0e8e4"
         rows = [
             ("Crop" if en else "裁切",
-             "105-term quadratic (13 features, pairwise products), 4,184 photos / 11 batches, "
+             "105-term quadratic (13 features, pairwise products); "
              "hold-out median IoU 0.8650; 80-photo blind test 0.9017"
              if en else
-             "105 项二次式（13 项特征 × 两两乘积），4184 张 / 11 批，"
+             "105 项二次式（13 项特征 × 两两乘积）；"
              "留出 IoU 中位 0.8650，80 张盲测 0.9017"),
             ("Exposure" if en else "曝光",
-             "EV = 3.0416 − 0.02108·L_in − 0.01362·L_box, 4,396 photos / 11 batches, "
+             "EV = 3.0416 − 0.02108·L_in − 0.01362·L_box; "
              "hold-out MAE 0.28–0.29 EV"
              if en else
-             "EV = 3.0416 − 0.02108·L_in − 0.01362·L_box，4396 张 / 11 批，"
+             "EV = 3.0416 − 0.02108·L_in − 0.01362·L_box；"
              "留出 MAE 0.28–0.29 档"),
             ("Sharpen" if en else "锐化",
              "By aperture, strictly increasing: ≤2.8 → 20, &lt;4 → 30, &lt;5.6 → 40, "
@@ -1986,8 +1986,8 @@ class MainWindow(QMainWindow):
                                        (C_CORE, "&#9679;"), (C_CROP, "&#9679;"),
                                        (C_HEAD, "&#9678;")), labels):
             lab = QLabel(
-                f'<span style="color:{color};font-size:15px;">{dot}</span>'
-                f'<span style="color:{text_color};font-size:12px;"> {text}</span>')
+                f'<span style="color:{color};font-size:13px;">{dot}</span>'
+                f'<span style="color:{text_color};font-size:11px;"> {text}</span>')
             lab.setTextFormat(Qt.RichText)
             lab.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
             self.legend_layout.addWidget(lab)
@@ -2047,9 +2047,11 @@ class MainWindow(QMainWindow):
         for i in range(self.grid.count()):
             it = self.grid.item(i)
             if it.data(Qt.UserRole + 1) == path:
+                sb = self.grid.verticalScrollBar()
+                pos = sb.value()
                 self.grid.blockSignals(True)
                 self.grid.setCurrentItem(it)
-                self.grid.scrollToItem(it, QAbstractItemView.EnsureVisible)
+                sb.setValue(pos)          # 选中但不抢滚动条：右侧不乱跳
                 self.grid.blockSignals(False)
                 break
 
@@ -2611,7 +2613,12 @@ class MainWindow(QMainWindow):
             for m in models.list_models(kind, en=self._lang == "en"):
                 cb.addItem(m["label"], m["path"])
             idx = cb.findData(cur)
-            cb.setCurrentIndex(idx if idx >= 0 else 0)
+            if idx < 0 and cur:
+                # 存的模型文件被删了：自动回落到内置，别留一个空指向
+                cb.setCurrentIndex(0)
+                self.cfg.update(**{key: cb.currentData() or ""})
+            else:
+                cb.setCurrentIndex(idx if idx >= 0 else 0)
             cb.blockSignals(False)
 
     def _model_changed(self, kind, cb):
