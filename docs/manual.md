@@ -209,7 +209,7 @@ Release 里是两个分卷 `iKunInsectStudio_v1.0.0.zip.001` / `.002`（整包 2
 
 **导出的拼版**：给客户或自己过一眼用。
 
-![导出的拼版](../docs/media/sheet.jpg)
+![导出的拼版](media/sheet.jpg)
 
 ---
 
