@@ -2,5 +2,5 @@
   "version": "1.0.0",
   "date": "2026-11-24",
   "notes": "首个发布版本：裁切 + 曝光 + 锐化，写 .xmp；训练页支持按文件夹挑图训练。",
-  "url": "https://github.com/Inccc-zty/iKun-Insect-Studio/releases"
+  "url": "https://github.com/Inccc-zty/iKun-Insect-Studio/releases/tag/v1.0.0"
 }
