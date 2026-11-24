@@ -122,7 +122,9 @@ TEXT = {
         "model_import_bad": "导入失败：{e}",
         "train_group": "从「原片 + 同名 XMP」重拟合",
         "train_ph": "选多少个目录都行，会各自递归扫描",
-        "train_dirs": "训练目录（可以放多个）",
+        "train_dirs": "训练目录（可以放多个，也能直接把照片拖进来）",
+        "train_added": "已加入 {n} 个目录，点「开始训练」即可",
+        "train_added_dup": "这些目录已经在列表里了",
         "add_train": "添加目录", "del_train": "移除选中", "clear_train": "清空列表",
         "browse": "浏览", "train_go": "开始训练",
         "train_note": "只在你定下的那几类量上重拟合：裁切仍是 105 项（13 项特征），"
@@ -242,7 +244,9 @@ TEXT = {
         "model_import_bad": "Import failed: {e}",
         "train_group": "Refit from RAW + sidecar XMP",
         "train_ph": "Pick one or more folders; each is scanned recursively",
-        "train_dirs": "Training folders (multiple allowed)",
+        "train_dirs": "Training folders (multiple allowed — you can drop photos here)",
+        "train_added": "Added {n} folder(s); press Start training",
+        "train_added_dup": "Those folders are already in the list",
         "add_train": "Add folder", "del_train": "Remove selected", "clear_train": "Clear list",
         "browse": "Browse", "train_go": "Start training",
         "train_note": "Refits only the terms you defined: crop stays 105 terms "
@@ -1358,7 +1362,7 @@ class MainWindow(QMainWindow):
         self.l_train_dirs.setObjectName("fieldLabel")
         g.addWidget(self.l_train_dirs)
 
-        self.train_list = QListWidget()
+        self.train_list = DropList(self._add_train_paths)   # 直接把照片/文件夹拖进来
         self.train_list.setObjectName("listbox")
         self.train_list.setFrameShape(QFrame.NoFrame)
         self.train_list.setFixedHeight(78)
@@ -2260,6 +2264,21 @@ class MainWindow(QMainWindow):
             if d not in self._train_dirs:
                 self._train_dirs.append(d)
                 self._refresh_train_list()
+
+    def _add_train_paths(self, paths):
+        """拖进来的是文件夹就用它；是照片就用它所在的目录。"""
+        added = 0
+        for p in paths:
+            p = os.path.normpath(p)
+            d = p if os.path.isdir(p) else os.path.dirname(p)
+            if d and os.path.isdir(d) and d not in self._train_dirs:
+                self._train_dirs.append(d)
+                added += 1
+        if added:
+            self._refresh_train_list()
+            self.status.showMessage(self._t("train_added", n=added), 5000)
+        else:
+            self.status.showMessage(self._t("train_added_dup"), 4000)
 
     def _del_train_dir(self):
         row = self.train_list.currentRow()
