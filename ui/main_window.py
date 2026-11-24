@@ -898,7 +898,7 @@ class MainWindow(QMainWindow):
         self._theme = self.cfg.get("theme") or "light"
         self._sheet_sig = None
         self._sheet_worker = None
-        self._train_dirs = list(self.cfg.get("train_dirs") or [])
+        self._train_dirs = self._norm_train_dirs(self.cfg.get("train_dirs") or [])
 
         self.setWindowTitle(self._t("title"))
         self.resize(1460, 920)
@@ -2249,34 +2249,79 @@ class MainWindow(QMainWindow):
             self.engine.pause()
 
     # ---------------------------------------------------------------- 训练
+    def _norm_train_dirs(self, raw):
+        """老配置里是字符串，新配置是 {dir, files}；统一成后者。"""
+        out = []
+        for r in raw or []:
+            if isinstance(r, dict):
+                d = r.get("dir") or ""
+                out.append({"dir": d, "files": list(r.get("files") or []),
+                            "n": r.get("n")})
+            elif isinstance(r, str) and r:
+                out.append({"dir": r, "files": [], "n": None})
+        return out
+
+    def _count_dir(self, d):
+        try:
+            from app import rawio
+            return len(rawio.scan_image_dir(d, self.cfg.get("recursive")))
+        except Exception:      # noqa: BLE001
+            return 0
+
     def _refresh_train_list(self):
         self.train_list.clear()
-        for d in self._train_dirs:
-            it = QListWidgetItem(d)
-            it.setToolTip(d)
+        for e in self._train_dirs:
+            if e.get("files"):
+                n = len(e["files"])
+            else:
+                if e.get("n") is None:
+                    e["n"] = self._count_dir(e["dir"])
+                n = e["n"]
+            name = os.path.basename(e["dir"].rstrip("\\/")) or e["dir"]
+            it = QListWidgetItem(f"{name}（{n} 张）")
+            it.setToolTip(f"{e['dir']}\n" + (f"只训练选中的 {n} 张" if e.get("files")
+                                              else f"整个文件夹 {n} 张"))
             self.train_list.addItem(it)
-        self.cfg.update(train_dirs=list(self._train_dirs))
+        self.cfg.update(train_dirs=[{"dir": e["dir"], "files": e.get("files") or []}
+                                    for e in self._train_dirs])
 
     def _pick_train_dir(self):
         d = QFileDialog.getExistingDirectory(self, self._t("pick_train"))
         if d:
             d = os.path.normpath(d)
-            if d not in self._train_dirs:
-                self._train_dirs.append(d)
+            if d not in {e["dir"] for e in self._train_dirs}:
+                self._train_dirs.append({"dir": d, "files": [], "n": None})
                 self._refresh_train_list()
 
     def _add_train_paths(self, paths):
-        """拖进来的是文件夹就用它；是照片就用它所在的目录。"""
-        added = 0
+        """文件夹 → 整个文件夹；照片 → 只训练被拖进来的这几张。"""
+        from app import rawio
+        buckets, touched = {}, 0
         for p in paths:
             p = os.path.normpath(p)
-            d = p if os.path.isdir(p) else os.path.dirname(p)
-            if d and os.path.isdir(d) and d not in self._train_dirs:
-                self._train_dirs.append(d)
-                added += 1
-        if added:
+            if os.path.isdir(p):
+                buckets.setdefault(p, None)      # None = 整个文件夹
+            elif os.path.isfile(p) and rawio.is_image(p):
+                buckets.setdefault(os.path.dirname(p), set())
+                if buckets[os.path.dirname(p)] is not None:
+                    buckets[os.path.dirname(p)].add(p)
+        by_dir = {e["dir"]: e for e in self._train_dirs}
+        for d, fs in buckets.items():
+            e = by_dir.get(d)
+            if e is None:
+                e = {"dir": d, "files": [], "n": None}
+                self._train_dirs.append(e)
+                by_dir[d] = e
+            if fs is None:                        # 整个文件夹覆盖前面的挑图
+                e["files"] = []
+                e["n"] = None
+            else:
+                merged = set(e.get("files") or []) | fs
+                e["files"] = sorted(merged)
+            touched += 1
+        if touched:
             self._refresh_train_list()
-            self.status.showMessage(self._t("train_added", n=added), 5000)
+            self.status.showMessage(self._t("train_added", n=touched), 5000)
         else:
             self.status.showMessage(self._t("train_added_dup"), 4000)
 
@@ -2294,7 +2339,7 @@ class MainWindow(QMainWindow):
         if not self._train_dirs:
             QMessageBox.warning(self, "", self._t("msg_need_dir"))
             return
-        ok, msg = self.trainer.start(list(self._train_dirs))
+        ok, msg = self.trainer.start([dict(e) for e in self._train_dirs])
         if not ok:
             QMessageBox.information(self, "", msg)
 

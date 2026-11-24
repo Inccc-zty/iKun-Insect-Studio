@@ -62,11 +62,24 @@ class Trainer:
 
     # ---------------------------------------------------------------- API
     def start(self, roots, subdir: str = ""):
-        """roots 可以是一个目录，也可以是多个目录（2026-11-17 用户要求）。"""
-        if isinstance(roots, str):
+        """roots：目录 / 目录列表 / [{dir, files}]。
+        files 非空表示「只用这几个文件」，为空表示整个目录。"""
+        if isinstance(roots, (str, dict)):
             roots = [roots]
-        roots = [os.path.normpath(r) for r in roots if r and os.path.isdir(r)]
-        if not roots:
+        entries = []
+        for r in roots:
+            if isinstance(r, dict):
+                d = os.path.normpath(r.get("dir") or "")
+                if not os.path.isdir(d):
+                    continue
+                fs = [os.path.normpath(f) for f in (r.get("files") or [])
+                      if f and os.path.isfile(f)]
+                entries.append({"dir": d, "files": fs})
+            else:
+                d = os.path.normpath(r) if r else ""
+                if d and os.path.isdir(d):
+                    entries.append({"dir": d, "files": []})
+        if not entries:
             return False, "先选至少一个存在的目录"
         with self.lock:
             if self.state in ("scan", "extract", "fit"):
@@ -77,10 +90,10 @@ class Trainer:
             self.log = []
             self.report = {}
             self._stop = False
-            self.roots = roots
-        self.thread = threading.Thread(target=self._run, args=(roots, subdir), daemon=True)
+            self.roots = [e["dir"] for e in entries]
+        self.thread = threading.Thread(target=self._run, args=(entries, subdir), daemon=True)
         self.thread.start()
-        return True, f"已开始（{len(roots)} 个目录）"
+        return True, f"已开始（{len(entries)} 个文件夹）"
 
     def stop(self):
         self._stop = True
@@ -114,12 +127,17 @@ class Trainer:
             self._say(f"失败：{e}")
 
     # ---------------------------------------------------------------- ① 扫描 + ② 提取
-    def _extract(self, roots, subdir):
+    def _extract(self, entries, subdir):
         files, groups = [], {}
-        for root in roots:
-            self._say(f"扫描 {root}")
-            fs = rawio.scan_image_dir(root, self.cfg.get("recursive"))
-            self._say(f"  {len(fs)} 张")
+        for ent in entries:
+            root, sel = ent["dir"], ent["files"]
+            if sel:
+                fs = [p for p in sel if rawio.is_image(p)]
+                self._say(f"{os.path.basename(root)}：用你挑的 {len(fs)} 张")
+            else:
+                self._say(f"扫描 {root}")
+                fs = rawio.scan_image_dir(root, self.cfg.get("recursive"))
+                self._say(f"  {len(fs)} 张")
             for p in fs:
                 files.append(p)
                 groups[p] = _group_of(p, root)
@@ -129,8 +147,6 @@ class Trainer:
             if t and t.get("HasCrop") and all(k in t for k in
                                               ("CropLeft", "CropTop", "CropRight", "CropBottom")):
                 pairs.append((p, t))
-        # 连拍去重：同目录编号差 ≤5 只留一张
-        pairs = _dedupe_burst(pairs)
         self._say(f"可用配对 {len(pairs)} 张（有裁切真值的），来自 {len(set(groups.get(p,'') for p,_ in pairs))} 个批次")
         if len(pairs) < 50:
             raise RuntimeError("可用样本少于 50 张，无法拟合")
