@@ -1604,8 +1604,22 @@ class MainWindow(QMainWindow):
         self._upd_worker.done.connect(lambda d: self._on_update(d, silent))
         self._upd_worker.start()
 
+    def _render_update(self):
+        """按当前语言重画「检查更新」那一行（切语言时会调用）。"""
+        d = getattr(self, "_upd_result", None)
+        if not d:
+            self.l_upd.setText("")
+            return
+        if not d.get("ok"):
+            self.l_upd.setText(self._t("upd_fail"))
+        elif d.get("newer"):
+            self.l_upd.setText(self._t("upd_new", v=d.get("latest", "")))
+        else:
+            self.l_upd.setText(self._t("upd_latest", v=d.get("latest", "")))
+
     def _on_update(self, d, silent):
         import time as _t
+        self._upd_result = d
         self.cfg.update(update_checked_at=_t.time())
         if not d.get("ok"):
             self.l_upd.setText(self._t("upd_fail"))
@@ -1952,8 +1966,9 @@ class MainWindow(QMainWindow):
         try:
             from app.version import VERSION
             self.l_ver.setText(self._t("ver_now", v=VERSION))
-            if not self.l_upd.text():
-                pass
+            self.b_update.setText(self._t("check_update"))
+            self.b_open_rel.setText(self._t("open_release"))
+            self._render_update()
         except Exception:      # noqa: BLE001
             pass
         if not self._tasks:
@@ -2982,6 +2997,13 @@ THEMES["dark"] = """
 * { outline: none; }
 QWidget#root, QMainWindow { background:#0f1412; }
 QWidget#trainpage { background:#0f1412; }
+QSplitter { background:#0f1412; }
+QSplitter::handle { background:#242b28; }
+QSplitter::handle:horizontal { width:4px; }
+QSplitter::handle:vertical { height:4px; }
+QSplitter::handle:hover { background:#3f8f6b; }
+QStatusBar { background:#0f1412; color:#8b9793; border:none; }
+QStatusBar::item { border:none; }
 
 QFrame#topbar { background:#161b19; border:1px solid #242b28; border-radius:10px; }
 QLabel#logo { color:#e9efeb; }
@@ -3068,6 +3090,13 @@ QStatusBar::item { border:none; }
 """
 
 THEMES["light"] = """
+QSplitter { background:#f7faf8; }
+QSplitter::handle { background:#dde5e0; }
+QSplitter::handle:horizontal { width:4px; }
+QSplitter::handle:vertical { height:4px; }
+QSplitter::handle:hover { background:#3f8f6b; }
+QStatusBar { background:#f7faf8; color:#4f5b56; border:none; }
+QStatusBar::item { border:none; }
 * { outline: none; }
 QWidget#root, QMainWindow { background:#f2f6f3; }
 QWidget#trainpage { background:#f2f6f3; }
