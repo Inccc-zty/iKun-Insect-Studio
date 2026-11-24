@@ -126,6 +126,10 @@ TEXT = {
         "train_added": "已加入 {n} 个目录，点「开始训练」即可",
         "train_pause": "暂停训练", "train_resume": "继续训练",
         "train_remove": "从训练集里去掉这个文件夹",
+        "model_auto_switched": "已自动切到新训练的模型：{n}",
+        "model_pick": "点这里选择要用的模型",
+        "train_clear_title": "清空训练列表",
+        "train_clear_ask": "要从训练集里移除全部 {n} 个文件夹吗？\n照片不会被删除，只是不参加这次训练。",
         "train_added_dup": "这些目录已经在列表里了",
         "add_train": "添加目录", "del_train": "移除选中", "clear_train": "清空列表",
         "browse": "浏览", "train_go": "开始训练",
@@ -250,6 +254,10 @@ TEXT = {
         "train_added": "Added {n} folder(s); press Start training",
         "train_pause": "Pause", "train_resume": "Resume",
         "train_remove": "Remove this folder from the training set",
+        "model_auto_switched": "Switched to the newly trained model: {n}",
+        "model_pick": "Click to pick a model",
+        "train_clear_title": "Clear the training list",
+        "train_clear_ask": "Remove all {n} folders from the training set?\nNo photos are deleted — they just drop out of this run.",
         "train_added_dup": "Those folders are already in the list",
         "add_train": "Add folder", "del_train": "Remove selected", "clear_train": "Clear list",
         "browse": "Browse", "train_go": "Start training",
@@ -1343,13 +1351,23 @@ class MainWindow(QMainWindow):
         self.b_open_models = _mini(QPushButton(self._t("model_open")))
         self.b_open_models.setObjectName("ghost")
         self.b_open_models.clicked.connect(self._open_models_dir)
+        self.b_crop_dd = QToolButton(); self.b_crop_dd.setText("▼")
+        self.b_crop_dd.setObjectName("dropdown")
+        self.b_crop_dd.setToolTip(self._t("model_pick"))
+        self.b_crop_dd.clicked.connect(self.cb_crop_model.showPopup)
+        self.b_ev_dd = QToolButton(); self.b_ev_dd.setText("▼")
+        self.b_ev_dd.setObjectName("dropdown")
+        self.b_ev_dd.setToolTip(self._t("model_pick"))
+        self.b_ev_dd.clicked.connect(self.cb_ev_model.showPopup)
         mg.addWidget(self.l_crop_model, 0, 0)
         mg.addWidget(self.cb_crop_model, 0, 1)
-        mg.addWidget(self.b_crop_import, 0, 2)
+        mg.addWidget(self.b_crop_dd, 0, 2)
+        mg.addWidget(self.b_crop_import, 0, 3)
         mg.addWidget(self.l_ev_model, 1, 0)
         mg.addWidget(self.cb_ev_model, 1, 1)
-        mg.addWidget(self.b_ev_import, 1, 2)
-        mg.addWidget(self.b_open_models, 0, 3, 2, 1)
+        mg.addWidget(self.b_ev_dd, 1, 2)
+        mg.addWidget(self.b_ev_import, 1, 3)
+        mg.addWidget(self.b_open_models, 0, 4, 2, 1)
         mg.setColumnStretch(1, 1)
         self.l_model_note = QLabel(self._t("model_note"))
         self.l_model_note.setObjectName("hint")
@@ -1391,7 +1409,8 @@ class MainWindow(QMainWindow):
         self.b_pause_train.setObjectName("ghost")
         self.b_pause_train.clicked.connect(self._toggle_pause_train)
         self.b_pause_train.setEnabled(False)
-        for b in (self.b_add_train, self.b_del_train, self.b_clear_train):
+        self.b_del_train.hide()
+        for b in (self.b_add_train, self.b_clear_train):
             row.addWidget(b)
         row.addStretch(1)
         row.addWidget(self.b_pause_train)
@@ -1679,7 +1698,7 @@ class MainWindow(QMainWindow):
     def _apply_theme(self, name):
         name = name if name in THEMES else "light"
         self._theme = name
-        self.setStyleSheet(THEMES[name])
+        self.setStyleSheet(THEMES[name] + COMBO_QSS[name])
         self.cfg.update(theme=name)
         if getattr(self, "logo_title", None) is not None:
             acc = "#4fa87f" if name == "dark" else "#3f8f6b"
@@ -2299,7 +2318,7 @@ class MainWindow(QMainWindow):
             lab = QLabel(f"{name}（{n} 张）")
             hb.addWidget(lab, 1)
             btn = QToolButton()
-            btn.setText("✕")
+            btn.setText("×")
             btn.setObjectName("ghost")
             btn.setFixedSize(20, 20)
             btn.setToolTip(self._t("train_remove"))
@@ -2366,6 +2385,12 @@ class MainWindow(QMainWindow):
             self._refresh_train_list()
 
     def _clear_train_dirs(self):
+        if not self._train_dirs:
+            return
+        if QMessageBox.question(
+                self, self._t("train_clear_title"), self._t("train_clear_ask", n=len(self._train_dirs)),
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No) != QMessageBox.Yes:
+            return
         self._train_dirs = []
         self._refresh_train_list()
 
@@ -2373,6 +2398,7 @@ class MainWindow(QMainWindow):
         if not self._train_dirs:
             QMessageBox.warning(self, "", self._t("msg_need_dir"))
             return
+        self._train_switched = False
         ok, msg = self.trainer.start([dict(e) for e in self._train_dirs])
         if not ok:
             QMessageBox.information(self, "", msg)
@@ -2732,6 +2758,18 @@ class MainWindow(QMainWindow):
                 self.t_log.setPlainText(log)
                 self.t_log.verticalScrollBar().setValue(
                     self.t_log.verticalScrollBar().maximum())
+            if ts["state"] == "done" and not getattr(self, "_train_switched", False):
+                rep = ts.get("report") or {}
+                got = []
+                for kind, key in (("crop", "coef"), ("ev", "ev_coef")):
+                    path = (rep.get(kind) or {}).get("adopted")
+                    if path:
+                        self.cfg.update(**{key: path})
+                        got.append(os.path.basename(path))
+                if got:
+                    self._train_switched = True
+                    self._refresh_models()
+                    self._toast(self._t("model_auto_switched", n="、".join(got)), 12000)
             if ts["state"] == "done":
                 self.status.showMessage(self._t("train_done", p=ts["out_dir"]), 15000)
                 if not getattr(self, "_train_done_seen", False):
@@ -2790,6 +2828,21 @@ class MainWindow(QMainWindow):
         self.engine.stop()
         super().closeEvent(e)
 
+
+
+def _combo_qss(b64):
+    return f"""
+QComboBox {{ padding-right: 4px; }}
+QComboBox::drop-down {{ subcontrol-origin: padding; subcontrol-position: center right;
+    width: 20px; border-left: 1px solid #d9e2dc; }}
+QComboBox::down-arrow {{ image: none; width: 0px; height: 0px; }}
+QToolButton#dropdown {{ border: none; background: transparent; color: #2f7d5d;
+    font-size: 11px; font-weight: 700; padding: 0 2px; }}
+QToolButton#dropdown:hover {{ background: rgba(63,143,107,0.12); border-radius: 4px; }}
+"""
+
+
+COMBO_QSS = {"light": _combo_qss("iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAYAAABiDJ37AAAAQ0lEQVR4nGNgGHGAEV3Avj/7P6mGHCycCjeHCZ8kqYZhNZAUQ7GpYyJFMTHyTORowmcZEz4DsWkmNYwZcAFyYn9wAgB7uBgUmiRU4gAAAABJRU5ErkJggg=="), "dark": _combo_qss("iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAYAAABiDJ37AAAAQ0lEQVR4nGNgGHGAEV2g4sSC/6Qa0mGRADeHCZ8kqYZhNZAUQ7GpYyJFMTHyTORowmcZEz4DsWkmNYwZcAFyYn9wAgDPkhI1y7sPcQAAAABJRU5ErkJggg==")}
 
 THEMES = {}
 
