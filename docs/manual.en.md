@@ -1,3 +1,13 @@
+## 0 See it run
+
+<video src="media/demo.mp4" controls width="100%"></video>
+
+(If GitHub does not play it inline: [download demo.mp4](media/demo.mp4))
+
+Drop a folder → mask, boxes and head point appear per photo → an `.xmp` lands beside every RAW.
+
+---
+
 # iKun Insect Studio · Manual
 
 > For people already shooting insects and editing in Lightroom, Camera Raw or an equivalent.
@@ -5,7 +15,7 @@
 
 ---
 
-## 0 What it is
+## 1 What it is
 
 **A tool that does the boring, repetitive part for you: find the insect, place the crop, set the exposure.**
 
@@ -40,7 +50,7 @@ Three columns per row: original / boxes and head point / result.
 
 ---
 
-## 1 The standard workflow
+## 2 The standard workflow
 
 ![workflow](media/flow_workflow.en.png)
 
@@ -53,6 +63,13 @@ Three columns per row: original / boxes and head point / result.
 | ⑤ Export | post-processing app | preset → export (size, output sharpening, watermark) | deliverables |
 
 **② and ③ cannot swap**: finish the hand edits first, then let the batch skip them.
+
+> **Back up the `.xmp` of the frames you finished by hand.** The batch honours your policy, but the
+> safe order is: edit → *Save metadata to file* in your editor (or copy the `.xmp` elsewhere) → run
+> the batch. A wrong policy then costs nothing.
+>
+> A new `.xmp` written by the app does not change what you already see — the editor has to read it
+> again. Overwriting is therefore irreversible; the backup is the only insurance.
 
 > **What to cull with**: Lightroom works, but a dedicated culler is faster — Nikon NX Studio, for
 > instance, is much quicker for browsing and rating. Other makers have their own; use whatever
@@ -69,7 +86,7 @@ The app only puts the crop and the exposure on the sliders.
 
 ---
 
-## 2 After installing
+## 3 After installing
 
 1. Unzip to a **fixed folder** (not the Desktop, and do not rename it later), e.g. `D:/iKunInsectStudio`
 2. Double-click `iKunInsectStudio.exe`
@@ -81,7 +98,7 @@ The app only puts the crop and the exposure on the sliders.
 
 ---
 
-## 3 How to run your first batch
+## 4 How to run your first batch
 
 1. Drop **a folder**, or **a batch of photos**, onto the window
 2. Mode: `Crop + Exposure`
@@ -94,7 +111,7 @@ The app only puts the crop and the exposure on the sliders.
 
 ---
 
-## 4 What it changes, and what it does not
+## 5 What it changes, and what it does not
 
 | | |
 |---|---|
@@ -110,7 +127,7 @@ Where the three numbers come from:
 
 ---
 
-## 5 How it plugs into your post-processing software
+## 6 How it plugs into your post-processing software
 
 ![with LR](media/flow_lr.en.png)
 
@@ -125,11 +142,11 @@ Two cases, one action differs:
 
 ---
 
-## 6 Two optional extras (not part of the mainline)
+## 7 Two optional extras (not part of the mainline)
 
 Neither is required; skipping both still gives you a complete batch.
 
-### 6.1 Nudging the head point inside the app
+### 7.1 Nudging the head point inside the app
 
 When: one frame got the head wrong and the crop followed it.
 
@@ -138,10 +155,18 @@ geometrically similar frames (nearest-neighbour from 3 records, a 7-parameter li
 
 - It only moves the **crop box**; nothing is written into Lightroom
 - **Every nudge makes the model fit your judgement better** — the corrections accumulate as
-  training samples and can be exported at any time (see 6.2)
+  training samples and can be exported at any time (see 7.2)
+
+> **Why does it say "from 3 records" and also "25 records to refit"?**
+> Two different mechanisms:
+> - **From 3**: no training at all — a lookup. Find the 3 nearest corrections by geometry, weight
+>   them by distance, nudge the box. No model file, effective immediately.
+> - **From 25**: enough samples to fit a 7-parameter linear residual model — that is what "refit" means.
+>
+> 3 records copies past experience; 25 records summarises it. Below 25, copying is enough.
 - Not a per-batch step: fix it when you see it
 
-### 6.2 Training your own crop model
+### 7.2 Training your own crop model
 
 When: your subjects look very different from the built-in set (all super-macro, all groups).
 
@@ -158,13 +183,13 @@ built-in model and you can switch back at any time.
 
 ---
 
-## 7 The interface
+## 8 The interface
 
 (to be filled with the Process / Train / About screenshots)
 
 ---
 
-## 8 FAQ
+## 9 FAQ
 
 **Q: Nothing changed in my software.**
 A: Check whether the run happened **before** import. A run before import is picked up automatically;
@@ -182,7 +207,7 @@ A: 1–3 s per photo on a GPU; faster with live preview off.
 
 ---
 
-## 9 Known limits
+## 10 Known limits
 
 1. **No rotated crops.** About 8% of your finished crops are rotated; the app only produces
    axis-aligned boxes, so those will not match. May be added later.
@@ -194,7 +219,7 @@ A: 1–3 s per photo on a GPU; faster with live preview off.
 
 ---
 
-## 10 Why it is 4.4 GB
+## 11 Why it is 4.4 GB
 
 Unzip it and you get a 4.4 GB folder with **not a single photo** in it. The breakdown:
 

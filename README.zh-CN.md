@@ -1,5 +1,7 @@
 # iKun Insect Studio · 昆虫自动化后期
 
+**[使用说明](docs/manual.md)** · **[技术报告](docs/report.md)** · [English](README.md)
+
 **一个替你做无聊重复动作的工具：找虫、定框、给曝光。**
 
 外拍一天回来，每个个体都得留一张记录；真正值得精修的只有几张，剩下几十上百张都是"记录级"。
@@ -14,7 +16,7 @@
 > 本软件以 **Lightroom** 和 **Adobe Camera Raw（ACR）** 为参考开发；`.xmp` 是 Adobe 的通用标准，
 > Lightroom、Camera Raw、Bridge、Photoshop 读的都是同一份。
 
-> English: [README.md](README.md) · **[使用说明](docs/manual.md)** · **[技术报告](docs/report.md)**
+
 
 ---
 

@@ -1,5 +1,7 @@
 # iKun Insect Studio
 
+**[Manual](docs/manual.en.md)** · **[Technical report](docs/report.en.md)** · [中文](README.zh-CN.md)
+
 **A tool that does the boring, repetitive part for you: find the insect, place the crop, set the exposure.**
 
 A day out shooting means one record frame per individual. Only a handful are worth a full edit;
@@ -15,7 +17,7 @@ This app does those two jobs and writes the result as a sidecar `.xmp` your edit
 > Built against **Lightroom** and **Adobe Camera Raw (ACR)** as references. `.xmp` is Adobe's
 > standard: Lightroom, Camera Raw, Bridge and Photoshop all read the same file.
 
-> 中文版见 [README.zh-CN.md](README.zh-CN.md) · **[Manual](docs/manual.en.md)** · **[Technical report](docs/report.en.md)**
+
 
 ---
 
