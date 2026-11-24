@@ -537,6 +537,31 @@ class QueueDelegate(QStyledItemDelegate):
             else ("#c98a2a" if not selected else "#f0c987")
 
 
+class ArrowCombo(QComboBox):
+    """原生箭头在各主题下几乎看不见，自己画一个在框内右侧。"""
+
+    def paintEvent(self, e):
+        super().paintEvent(e)
+        from PySide6.QtGui import QPainter, QPolygonF, QColor
+        from PySide6.QtCore import QPointF
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing, True)
+        w, h = self.width(), self.height()
+        cx, cy = w - 15, h / 2.0
+        col = QColor("#2f7d5d" if self.isEnabled() else "#a8b3ad")
+        if getattr(self, "_dark", False):
+            col = QColor("#7cc4a4" if self.isEnabled() else "#7d8a84")
+        p.setPen(Qt.NoPen)
+        p.setBrush(col)
+        p.drawPolygon(QPolygonF([QPointF(cx - 5, cy - 2.6), QPointF(cx + 5, cy - 2.6),
+                                 QPointF(cx, cy + 3.8)]))
+        p.end()
+
+    def set_theme(self, dark):
+        self._dark = bool(dark)
+        self.update()
+
+
 class _UpdWorker(QThread):
     """后台查一次 GitHub，不卡界面。"""
     done = Signal(dict)
@@ -1358,7 +1383,7 @@ class MainWindow(QMainWindow):
         mg.setVerticalSpacing(8)
         self.l_crop_model = QLabel(self._t("model_crop"))
         self.l_crop_model.setObjectName("fieldLabel")
-        self.cb_crop_model = QComboBox()
+        self.cb_crop_model = ArrowCombo()
         self.cb_crop_model.setMinimumWidth(360)
         self.cb_crop_model.setMaximumWidth(560)
         self.cb_crop_model.currentIndexChanged.connect(
@@ -1368,7 +1393,7 @@ class MainWindow(QMainWindow):
         self.b_crop_import.clicked.connect(lambda: self._import_model("crop"))
         self.l_ev_model = QLabel(self._t("model_ev"))
         self.l_ev_model.setObjectName("fieldLabel")
-        self.cb_ev_model = QComboBox()
+        self.cb_ev_model = ArrowCombo()
         self.cb_ev_model.setMinimumWidth(360)
         self.cb_ev_model.setMaximumWidth(560)
         self.cb_ev_model.currentIndexChanged.connect(
@@ -1379,23 +1404,15 @@ class MainWindow(QMainWindow):
         self.b_open_models = _mini(QPushButton(self._t("model_open")))
         self.b_open_models.setObjectName("ghost")
         self.b_open_models.clicked.connect(self._open_models_dir)
-        self.b_crop_dd = QToolButton(); self.b_crop_dd.setText("▼")
-        self.b_crop_dd.setObjectName("dropdown")
-        self.b_crop_dd.setToolTip(self._t("model_pick"))
-        self.b_crop_dd.clicked.connect(self.cb_crop_model.showPopup)
-        self.b_ev_dd = QToolButton(); self.b_ev_dd.setText("▼")
-        self.b_ev_dd.setObjectName("dropdown")
-        self.b_ev_dd.setToolTip(self._t("model_pick"))
-        self.b_ev_dd.clicked.connect(self.cb_ev_model.showPopup)
+        for cb in (self.cb_crop_model, self.cb_ev_model):
+            cb.setToolTip(self._t("model_pick"))
         mg.addWidget(self.l_crop_model, 0, 0)
         mg.addWidget(self.cb_crop_model, 0, 1)
-        mg.addWidget(self.b_crop_dd, 0, 2)
-        mg.addWidget(self.b_crop_import, 0, 3)
+        mg.addWidget(self.b_crop_import, 0, 2)
         mg.addWidget(self.l_ev_model, 1, 0)
         mg.addWidget(self.cb_ev_model, 1, 1)
-        mg.addWidget(self.b_ev_dd, 1, 2)
-        mg.addWidget(self.b_ev_import, 1, 3)
-        mg.addWidget(self.b_open_models, 0, 4, 2, 1)
+        mg.addWidget(self.b_ev_import, 1, 2)
+        mg.addWidget(self.b_open_models, 0, 3, 2, 1)
         mg.setColumnStretch(1, 1)
         self.l_model_note = QLabel(self._t("model_note"))
         self.l_model_note.setObjectName("hint")
@@ -1797,6 +1814,9 @@ class MainWindow(QMainWindow):
                 self.list.viewport().update()
         if getattr(self, "preview", None) is not None:
             self.preview.set_theme(name == "dark")
+        for cb in (getattr(self, "cb_crop_model", None), getattr(self, "cb_ev_model", None)):
+            if isinstance(cb, ArrowCombo):
+                cb.set_theme(name == "dark")
         if hasattr(self, "about"):
             self.about.setHtml(self._about_html())
         self._update_legend()
@@ -2921,9 +2941,8 @@ class MainWindow(QMainWindow):
 
 def _combo_qss(b64):
     return f"""
-QComboBox {{ padding-right: 4px; }}
-QComboBox::drop-down {{ subcontrol-origin: padding; subcontrol-position: center right;
-    width: 20px; border-left: 1px solid #d9e2dc; }}
+QComboBox {{ padding-right: 26px; }}
+QComboBox::drop-down {{ width: 0px; border: none; }}
 QComboBox::down-arrow {{ image: none; width: 0px; height: 0px; }}
 QToolButton#dropdown {{ border: none; background: transparent; color: #2f7d5d;
     font-size: 11px; font-weight: 700; padding: 0 2px; }}

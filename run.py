@@ -44,6 +44,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-api", action="store_true")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--reset-all", action="store_true",
+                    help="连 models/ 一起清空（默认重置会保留你训练/导入的模型）")
     ap.add_argument("--reset", action="store_true",
                     help="先把 data/ 清空到出厂状态再启动（测试用）")
     a = ap.parse_args()
@@ -70,8 +72,8 @@ def main():
     from app.trainer import Trainer
     from app.reset import wipe
 
-    if a.reset:
-        inv = wipe()
+    if a.reset or a.reset_all:
+        inv = wipe(keep_models=not a.reset_all)
         print(f"[reset] 清空 {len(inv['items'])} 项 / {inv['files']} 个文件 / "
               f"{inv['bytes'] / 1e6:.1f} MB，已恢复出厂状态", flush=True)
 

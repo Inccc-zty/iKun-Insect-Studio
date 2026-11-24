@@ -55,12 +55,21 @@ def inventory():
             "bytes": sum(i["bytes"] for i in items)}
 
 
-def wipe():
-    """删掉 data 下的所有内容，并把只读的默认文件放回去。返回清点结果。"""
+KEEP_ON_RESET = {"models"}     # 用户训练/导入的系数：重置也不许删
+
+
+def wipe(keep_models: bool = True):
+    """删掉 data 下的内容，并把只读的默认文件放回去。返回清点结果。
+
+    keep_models=True（默认）会**保留 models/**——那是用户自己训练或导入的资产，
+    升级、重置、清理都不应该动它。只有 wipe(keep_models=False) 才真的清空。
+    """
     inv = inventory()
     d = data_dir()
     if os.path.isdir(d):
         for name in os.listdir(d):
+            if keep_models and name in KEEP_ON_RESET:
+                continue
             p = os.path.join(d, name)
             try:
                 if os.path.isdir(p):
