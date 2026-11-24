@@ -90,6 +90,7 @@ class Trainer:
             self.log = []
             self.report = {}
             self._stop = False
+            self._pause = False
             self.roots = [e["dir"] for e in entries]
         self.thread = threading.Thread(target=self._run, args=(entries, subdir), daemon=True)
         self.thread.start()
@@ -97,6 +98,11 @@ class Trainer:
 
     def stop(self):
         self._stop = True
+
+    def toggle_pause(self):
+        self._pause = not getattr(self, "_pause", False)
+        self._say("已暂停（点「继续训练」接着跑）" if self._pause else "继续")
+        return self._pause
 
     def status(self):
         with self.lock:
@@ -147,7 +153,7 @@ class Trainer:
             if t and t.get("HasCrop") and all(k in t for k in
                                               ("CropLeft", "CropTop", "CropRight", "CropBottom")):
                 pairs.append((p, t))
-        self._say(f"可用配对 {len(pairs)} 张（有裁切真值的），来自 {len(set(groups.get(p,'') for p,_ in pairs))} 个批次")
+        self._say(f"已加载 {len(pairs)} 张照片（有裁切真值）")
         if len(pairs) < 50:
             raise RuntimeError("可用样本少于 50 张，无法拟合")
 
@@ -161,10 +167,23 @@ class Trainer:
         self.engine._ensure_models()
 
         rows = []
+        cache = _load_cache()
+        reused = 0
         t0 = time.time()
         for i, (p, t) in enumerate(pairs, 1):
             if self._stop:
                 raise RuntimeError("已停止")
+            while getattr(self, "_pause", False) and not self._stop:
+                time.sleep(0.2)
+            key = _cache_key(p)
+            hit = cache.get(key)
+            if hit and abs(hit.get("mtime", 0) - _mtime(p)) < 1:
+                rows.append(hit["row"])
+                reused += 1
+                with self.lock:
+                    self.progress = 100.0 * i / max(len(pairs), 1)
+                    self.msg = f"复用 {reused} 张（已提取过）"
+                continue
             try:
                 prev = rawio.preview_pil(p)
                 res = mask_head.analyze(
@@ -176,7 +195,7 @@ class Trainer:
                 head = res["head"] if nsub <= 1 else None
                 core, full = res["core"], res["full"]
                 me = exposure_model.measure_pil(prev, res["mask"], full)
-                rows.append({
+                row = {
                     "group": groups.get(p) or os.path.dirname(p),
                     "jpg": p, "nef": p,
                     "crop_l": t["CropLeft"], "crop_t": t["CropTop"],
@@ -194,7 +213,11 @@ class Trainer:
                     "fnumber": "",
                     "L_in": "" if me.get("L_in") is None else round(me["L_in"], 2),
                     "L_box": "" if me.get("L_box") is None else round(me["L_box"], 2),
-                })
+                }
+                rows.append(row)
+                cache[key] = {"mtime": _mtime(p), "row": row}
+                if i % 20 == 0:
+                    _save_cache(cache)
             except Exception as e:  # noqa: BLE001
                 self._say(f"跳过 {os.path.basename(p)}: {type(e).__name__}")
             with self.lock:
@@ -209,6 +232,9 @@ class Trainer:
             w = csv.DictWriter(f, fieldnames=FIELDS, extrasaction="ignore")
             w.writeheader()
             w.writerows(rows)
+        _save_cache(cache)
+        if reused:
+            self._say(f"其中 {reused} 张直接用了上次的提取结果，没重复跑")
         self._say(f"写出 {csvp}（{len(rows)} 行）")
         self.train_csv = csvp
         self.rows = rows
@@ -391,6 +417,40 @@ class Trainer:
             md.append("```")
         open(os.path.join(self.out_dir, "report.md"), "w", encoding="utf-8").write("\n".join(md))
         self._say("完成")
+
+
+CACHE_FILE = os.path.join(OUT_ROOT, "train_cache.json")
+
+
+def _mtime(p):
+    try:
+        return os.path.getmtime(p)
+    except OSError:
+        return 0.0
+
+
+def _cache_key(p):
+    return os.path.normcase(os.path.abspath(p))
+
+
+def _load_cache():
+    try:
+        with open(CACHE_FILE, encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except Exception:      # noqa: BLE001
+        return {}
+
+
+def _save_cache(cache):
+    try:
+        os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
+        tmp = CACHE_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False)
+        os.replace(tmp, CACHE_FILE)
+    except Exception:      # noqa: BLE001
+        pass
 
 
 def _box(t):

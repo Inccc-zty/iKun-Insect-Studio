@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
     QSizePolicy, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QComboBox, QListWidget, QListWidgetItem, QProgressBar, QSplitter,
     QTabWidget, QLineEdit, QFileDialog, QMessageBox, QGroupBox, QGridLayout, QScrollArea,
-    QCheckBox, QTextEdit, QHeaderView, QFrame,
+    QCheckBox, QTextEdit, QHeaderView, QFrame, QToolButton,
     QStyledItemDelegate, QStyle, QStyleOptionViewItem, QApplication,
     QAbstractItemView, QGraphicsOpacityEffect,
 )
@@ -124,6 +124,8 @@ TEXT = {
         "train_ph": "选多少个目录都行，会各自递归扫描",
         "train_dirs": "训练目录（可以放多个，也能直接把照片拖进来）",
         "train_added": "已加入 {n} 个目录，点「开始训练」即可",
+        "train_pause": "暂停训练", "train_resume": "继续训练",
+        "train_remove": "从训练集里去掉这个文件夹",
         "train_added_dup": "这些目录已经在列表里了",
         "add_train": "添加目录", "del_train": "移除选中", "clear_train": "清空列表",
         "browse": "浏览", "train_go": "开始训练",
@@ -246,6 +248,8 @@ TEXT = {
         "train_ph": "Pick one or more folders; each is scanned recursively",
         "train_dirs": "Training folders (multiple allowed — you can drop photos here)",
         "train_added": "Added {n} folder(s); press Start training",
+        "train_pause": "Pause", "train_resume": "Resume",
+        "train_remove": "Remove this folder from the training set",
         "train_added_dup": "Those folders are already in the list",
         "add_train": "Add folder", "del_train": "Remove selected", "clear_train": "Clear list",
         "browse": "Browse", "train_go": "Start training",
@@ -1383,9 +1387,14 @@ class MainWindow(QMainWindow):
         self.t_go.setObjectName("primary")
         self.t_go.setMinimumHeight(28)
         self.t_go.clicked.connect(self._train)
+        self.b_pause_train = _mini(QPushButton(self._t("train_pause")))
+        self.b_pause_train.setObjectName("ghost")
+        self.b_pause_train.clicked.connect(self._toggle_pause_train)
+        self.b_pause_train.setEnabled(False)
         for b in (self.b_add_train, self.b_del_train, self.b_clear_train):
             row.addWidget(b)
         row.addStretch(1)
+        row.addWidget(self.b_pause_train)
         row.addWidget(self.t_go)
         g.addLayout(row)
         v.addWidget(self.box_train)
@@ -2278,10 +2287,25 @@ class MainWindow(QMainWindow):
                     e["n"] = self._count_dir(e["dir"])
                 n = e["n"]
             name = os.path.basename(e["dir"].rstrip("\\/")) or e["dir"]
-            it = QListWidgetItem(f"{name}（{n} 张）")
+            it = QListWidgetItem()
             it.setToolTip(f"{e['dir']}\n" + (f"只训练选中的 {n} 张" if e.get("files")
                                               else f"整个文件夹 {n} 张"))
+            it.setSizeHint(QSize(120, 26))
             self.train_list.addItem(it)
+            holder = QWidget()
+            hb = QHBoxLayout(holder)
+            hb.setContentsMargins(4, 0, 2, 0)
+            hb.setSpacing(4)
+            lab = QLabel(f"{name}（{n} 张）")
+            hb.addWidget(lab, 1)
+            btn = QToolButton()
+            btn.setText("✕")
+            btn.setObjectName("ghost")
+            btn.setFixedSize(20, 20)
+            btn.setToolTip(self._t("train_remove"))
+            btn.clicked.connect(lambda _=False, d=e["dir"]: self._remove_train_dir(d))
+            hb.addWidget(btn)
+            self.train_list.setItemWidget(it, holder)
         self.cfg.update(train_dirs=[{"dir": e["dir"], "files": e.get("files") or []}
                                     for e in self._train_dirs])
 
@@ -2324,6 +2348,16 @@ class MainWindow(QMainWindow):
             self.status.showMessage(self._t("train_added", n=touched), 5000)
         else:
             self.status.showMessage(self._t("train_added_dup"), 4000)
+
+    def _remove_train_dir(self, d):
+        key = os.path.normcase(os.path.normpath(d))
+        self._train_dirs = [e for e in self._train_dirs
+                            if os.path.normcase(os.path.normpath(e["dir"])) != key]
+        self._refresh_train_list()
+
+    def _toggle_pause_train(self):
+        paused = self.trainer.toggle_pause()
+        self.b_pause_train.setText(self._t("train_resume" if paused else "train_pause"))
 
     def _del_train_dir(self):
         row = self.train_list.currentRow()
