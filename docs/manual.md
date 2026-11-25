@@ -9,7 +9,7 @@
 
 <video src="media/demo.mp4" controls width="100%"></video>
 
-（GitHub 不内嵌播放时，点这里下载：[demo.mp4](media/demo.mp4)）
+（GitHub 不内嵌播放时，点这里下载视频：[demo.mp4](media/demo.mp4)）
 
 拖入文件夹 → 逐张出掩膜、框、头点 → 结束时在每张 RAW 旁边写一个 `.xmp`。全程不用点第二次。
 

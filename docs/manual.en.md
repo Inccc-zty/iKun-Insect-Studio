@@ -2,7 +2,7 @@
 
 <video src="media/demo.mp4" controls width="100%"></video>
 
-(If GitHub does not play it inline: [download demo.mp4](media/demo.mp4))
+(If GitHub does not play it inline: [download the video](media/demo.mp4))
 
 Drop a folder → mask, boxes and head point appear per photo → an `.xmp` lands beside every RAW.
 
