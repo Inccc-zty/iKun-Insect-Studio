@@ -204,30 +204,22 @@ geometrically similar frames (nearest-neighbour from 3 records, a 7-parameter li
 
 Use it when your subject matter differs a lot from the built-in set (all super-macro, all groups).
 
-What the model learns is one sentence: **given a bug like this, where should the frame sit and how
-big should it be.** That can be measured two equivalent ways, hence two entry points.
+**Almost everyone only needs one path: train on your finished JPEG exports.** That is the default
+data source in the Train tab.
 
-#### Entry 1: originals (RAW or full-frame JPG) + sidecar XMP
+#### Default: finished JPEGs
 
-Set **Data source** (top right of the Train tab) to **RAW / JPG with XMP**, then use the add button.
+Leave **Data source** on *Finished JPEGs*, click **Add finished-JPEG folder**, pick the export folder.
+**No originals, no XMP.**
 
-The XMP states your crop box in the original's full-frame coordinates — the most direct ground truth
-there is. RAW and full-frame JPG both work: each is "the whole uncropped frame", only the file format
-differs.
-
-#### Entry 2: finished JPEG exports only
-
-Set **Data source** to **Finished JPEGs only**, then add the export folder. **No originals, no XMP.**
-
-Why it works: an export *is* the frame after cropping. Run the mask on it and three things are
-directly measurable —
+Why it works: an export *is* the frame after cropping. Mask it once and three things are measurable —
 
 - how much of the frame the insect takes (`1/body width`, `1/body height`, frame = 1)
 - how far the body centre sits from the frame centre (`ox`, `oy`)
 - head direction, limb share, body aspect (dispersion, aspect ratio, limb ratio)
 
-Those ratios are properties of the animal, not of the frame size, so the numbers measured on an export
-are the same numbers you would get on the original. The model therefore learns
+Those ratios are properties of the animal, not of the frame size, so what you measure on an export is
+what you would measure on the original. The model learns
 
     shape → "the frame should be N× the body width, offset by this much"
 
@@ -236,31 +228,17 @@ and inference inverts it:
     frame width W = body width × 2^t0
     frame centre = body centre − (ox·W, oy·H)
 
-No originals needed, no XMP needed — an original is just *another way to measure*, not a prerequisite.
+> Closed-form check: build exports from a known rule (width = body width × (4 + 0.6·limb ratio), aspect
+> 1.25, offset (+2%, +3%)), train on exports only, invert on 60 unseen frames — **median IoU 0.9997**.
 
-> Closed-form check: generate exports with a known rule (width = body width × (4 + 0.6·limb ratio),
-> aspect 1.25, body offset (+2%, +3%)), train on the exports only, then invert on 60 unseen frames:
-> **median IoU 0.9997**. The mechanism loses no information.
+#### The other path: RAW / JPG with XMP
 
-#### Entry 3: exports plus their uncropped originals
+Switch **Data source** to *RAW / JPG with XMP* and pick the folder holding the originals.
 
-Set **Data source** to **Finished JPEGs + originals**, then add: originals first, exports second.
+The XMP carries your crop box in the original's full-frame coordinates — the most direct ground truth;
+RAW and full-frame JPG both work. Use it when you still have the Lightroom edits from that shoot.
 
-One extra step over entry 2: feature registration confirms the pair really is the same photo and that
-the crop is axis-aligned, then the box lands in the original's coordinate system. **Unverified pairs are
-skipped**, never coerced. Same names and matching subfolders are required; two candidate originals with
-the same stem are rejected outright.
-
-#### Which to use
-
-| What you have | Data source |
-|---|---|
-| RAW or full-frame JPG + sidecar XMP | RAW / JPG with XMP (least work) |
-| Finished exports, no originals | Finished JPEGs only |
-| Exports plus uncropped originals | Finished JPEGs + originals (labels in original coordinates) |
-
-All three need **at least 50 photos**. The output is a coefficient file; once adopted it can be switched
-in the app.
+Both paths need **at least 50 photos**. The output is a coefficient file, switchable in the app.
 
 > Both are in the app, but **neither is a step in the workflow**. In normal use you finish ③ and go
 > straight to Lightroom.

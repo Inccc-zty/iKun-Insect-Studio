@@ -19,7 +19,8 @@ DEFAULTS = {
     "sharpen_enable": True,   # 是否写锐化
     "skip_if_xmp": False,     # 旧字段，保留兼容
     "xmp_policy": "protect",  # protect | skip_all | force（见 app/xmpio.py）
-    "train_dirs": [],         # 训练目录列表（可多个）
+    "train_dirs": [],
+    "train_src": "crop_only",  # 训练数据来源：xmp | crop_only（默认成品 JPG）
     "profile": "Camera Standard",
     "recursive": True,
     "preload": True,          # 启动后在后台把模型读进显存（省掉第一次点开始的 30–40 秒）

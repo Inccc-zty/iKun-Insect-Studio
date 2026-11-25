@@ -23,7 +23,7 @@ import time
 
 import numpy as np
 
-from . import crop_pair, crop_rel, models, rawio, xmpio
+from . import crop_rel, models, rawio, xmpio
 
 import sys as _sys
 from .paths import app_root, skill_dir
@@ -36,6 +36,13 @@ import mask_head        # noqa: E402
 
 ROOT = app_root()
 OUT_ROOT = os.path.join(ROOT, "data")
+
+BOUNDS = ("CropLeft", "CropTop", "CropRight", "CropBottom")
+
+
+def _is_jpeg(path):
+    return os.path.splitext(path)[1].lower() in (".jpg", ".jpeg")
+
 
 FIELDS = ["group", "jpg", "nef", "crop_l", "crop_t", "crop_r", "crop_b",
           "core_l", "core_t", "core_r", "core_b",
@@ -76,15 +83,12 @@ class Trainer:
                       if f and os.path.isfile(f)]
                 if r.get("files") and not fs:
                     continue
-                original = r.get("original_dir")
-                if original and not os.path.isdir(original):
-                    return False, "原图目录不存在 / Original folder is missing"
-                entries.append({"dir": d, "files": fs, "original_dir": original,
-                                "mode": r.get("mode") or ("pair" if original else "xmp")})
+                entries.append({"dir": d, "files": fs,
+                                "mode": r.get("mode") or "xmp"})
             else:
                 d = os.path.normpath(r) if r else ""
                 if d and os.path.isdir(d):
-                    entries.append({"dir": d, "files": [], "original_dir": None, "mode": "xmp"})
+                    entries.append({"dir": d, "files": [], "mode": "xmp"})
         if not entries:
             return False, "先选至少一个存在的目录"
         with self.lock:
@@ -153,29 +157,16 @@ class Trainer:
                 raise RuntimeError("已停止")
             root, selected = ent["dir"], ent["files"]
             files = selected or rawio.scan_image_dir(root, self.cfg.get("recursive"))
-            original = ent.get("original_dir")
             for path in files:
                 while self._pause and not self._stop:
                     time.sleep(0.2)
                 if self._stop:
                     raise RuntimeError("已停止")
-                if not original and rawio.is_image(path):
-                    target = xmpio.read_truth(path)
-                    source = path
-                    label = xmpio.sidecar_path(path)
-                elif original and crop_pair.is_jpeg(path):
-                    try:
-                        source, target = crop_pair.match_export(path, root, original, rawio)
-                    except Exception:      # noqa: BLE001  单张读不了就跳过，不中断整批
-                        source, target = None, None
-                    label = path
-                    if target is None:
-                        self._say(f"未能验证裁切配对 / Crop match rejected: {path}")
-                else:
-                    continue
+                target = xmpio.read_truth(path)
+                source, label = path, xmpio.sidecar_path(path)
                 if not target or not target.get("HasCrop"):
                     continue
-                coords = [target.get(k) for k in crop_pair.BOUNDS]
+                coords = [target.get(k) for k in BOUNDS]
                 if any(v is None or not math.isfinite(v) for v in coords):
                     continue
                 left, top, right, bottom = coords
@@ -185,7 +176,7 @@ class Trainer:
                 if key in seen:
                     continue
                 seen.add(key)
-                group = _group_of(source, original or root)
+                group = _group_of(source, root)
                 pairs.append((source, target, group, label))
         self._say(f"已加载 {len(pairs)} 张照片（有裁切真值）")
         if len(pairs) < 50:
@@ -275,7 +266,7 @@ class Trainer:
         for ent in entries:
             root, selected = ent["dir"], ent["files"]
             fs = selected or rawio.scan_image_dir(root, self.cfg.get("recursive"))
-            fs = [p for p in fs if crop_pair.is_jpeg(p)]
+            fs = [p for p in fs if _is_jpeg(p)]
             self._say(f"{os.path.basename(root)}：{len(fs)} 张成品 JPG")
             for p in fs:
                 files.append(p); groups[p] = _cache_key(os.path.dirname(p))

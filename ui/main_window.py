@@ -125,20 +125,13 @@ TEXT = {
         "train_src": "数据来源",
         "train_tag_xmp": "XMP",
         "train_tag_crop": "成片",
-        "train_tag_pair": "成片+原图",
         "train_src_xmp": "带 XMP 的 RAW / 原图 JPG",
-        "train_src_crop": "成品 JPG（只有成片）",
-        "train_src_pair": "成品 JPG + 原图",
-        "train_src_tip": "带 XMP：XMP 里写着裁切框，最省事。\n成品 JPG：只有修好的成片，软件从成片反解裁切框。\n成品 JPG + 原图：两者配对，配准后落回原片坐标。",
+        "train_src_crop": "成品 JPG",
+        "train_src_tip": "带 XMP：XMP 里写着裁切框，最省事。\n成品 JPG：只有修好的成片，软件从成片反解裁切框。",
         "train_add_xmp": "添加带 XMP 的文件夹",
         "train_add_crop": "添加成品 JPG 文件夹",
-        "train_add_pair": "添加原图与成品目录",
         "train_pick_xmp": "选择含 RAW/原图 JPG 与同名 XMP 的文件夹",
         "train_pick_crop": "选择成品 JPG 文件夹",
-        "train_original": "选择未裁切原图目录",
-        "train_export": "选择对应的成品 JPG 目录",
-        "train_pair_tip": "原图：{p}\n成品与原图须同名、子目录对应，配准通过才计入。",
-        "train_pair_same": "请选择两个不同的原图和成品目录。",
         "train_dirs": "训练目录（可以放多个，也能直接把照片拖进来）",
         "train_added": "已加入 {n} 个目录，点「开始训练」即可",
         "train_pause": "暂停训练", "train_resume": "继续训练",
@@ -281,20 +274,13 @@ TEXT = {
         "train_src": "Data source",
         "train_tag_xmp": "XMP",
         "train_tag_crop": "exports",
-        "train_tag_pair": "exports + originals",
         "train_src_xmp": "RAW / JPG with XMP",
-        "train_src_crop": "Finished JPEGs only",
-        "train_src_pair": "Finished JPEGs + originals",
-        "train_src_tip": "With XMP: the crop box is in the sidecar — least work.\nJPEGs only: the export is the framing; the app inverts it.\nJPEGs + originals: pair them, labels land in original coordinates.",
+        "train_src_crop": "Finished JPEGs",
+        "train_src_tip": "With XMP: the crop box is in the sidecar — least work.\nJPEGs only: the export is the framing itself, the app inverts it into a box.",
         "train_add_xmp": "Add folder with XMP",
         "train_add_crop": "Add finished-JPEG folder",
-        "train_add_pair": "Add originals and exports",
         "train_pick_xmp": "Pick a folder with RAW/JPG plus same-name XMP",
         "train_pick_crop": "Pick a folder of finished JPEGs",
-        "train_original": "Select the uncropped originals folder",
-        "train_export": "Select the matching JPEG exports folder",
-        "train_pair_tip": "Originals: {p}\nSame names and matching subfolders; a pair counts only if registration agrees.",
-        "train_pair_same": "Choose separate originals and exports folders.",
         "train_dirs": "Training folders (multiple allowed — you can drop photos here)",
         "train_added": "Added {n} folder(s); press Start training",
         "train_pause": "Pause", "train_resume": "Resume",
@@ -1481,10 +1467,9 @@ class MainWindow(QMainWindow):
         self.l_train_src = QLabel(self._t("train_src"))
         self.l_train_src.setObjectName("hint")
         hsrc.addWidget(self.l_train_src)
-        self.cb_train_src = QComboBox()
-        self.cb_train_src.addItems([self._t("train_src_xmp"), self._t("train_src_crop"),
-                                    self._t("train_src_pair")])
-        _idx = {"xmp": 0, "crop_only": 1, "pair": 2}.get(self.cfg.get("train_src") or "xmp", 0)
+        self.cb_train_src = ArrowCombo()
+        self.cb_train_src.addItems([self._t("train_src_xmp"), self._t("train_src_crop")])
+        _idx = {"xmp": 0, "crop_only": 1}.get(self.cfg.get("train_src") or "crop_only", 1)
         self.cb_train_src.setCurrentIndex(_idx)
         self.cb_train_src.setMinimumWidth(186)
         self.cb_train_src.currentIndexChanged.connect(self._train_src_changed)
@@ -2012,8 +1997,7 @@ class MainWindow(QMainWindow):
         _keep = self.cb_train_src.currentIndex()
         self.cb_train_src.blockSignals(True)
         self.cb_train_src.clear()
-        self.cb_train_src.addItems([self._t("train_src_xmp"), self._t("train_src_crop"),
-                                    self._t("train_src_pair")])
+        self.cb_train_src.addItems([self._t("train_src_xmp"), self._t("train_src_crop")])
         self.cb_train_src.setCurrentIndex(_keep)
         self.cb_train_src.blockSignals(False)
         self._sync_add_button()
@@ -2537,11 +2521,9 @@ class MainWindow(QMainWindow):
             it = QListWidgetItem()
             it.setToolTip(f"{e['dir']}\n" + (self._t("train_tip_files", n=n) if e.get("files")
                                               else self._t("train_tip_dir", n=n)))
-            _m = e.get("mode") or ("pair" if e.get("original_dir") else "xmp")
-            name = f"{name} · {self._t({'xmp': 'train_tag_xmp', 'crop_only': 'train_tag_crop', 'pair': 'train_tag_pair'}[_m])}"
-            it.setToolTip(f"{e['dir']}\n" + self._t(
-                "train_pair_tip", p=e["original_dir"]) if e.get("original_dir")
-                else it.toolTip())
+            _m = e.get("mode") or "xmp"
+            name = f"{name} · {self._t('train_tag_crop' if _m == 'crop_only' else 'train_tag_xmp')}"
+
             it.setSizeHint(QSize(120, 26))
             self.train_list.addItem(it)
             holder = QWidget()
@@ -2564,7 +2546,7 @@ class MainWindow(QMainWindow):
                                     for e in self._train_dirs])
 
     def _train_src(self):
-        return ("xmp", "crop_only", "pair")[max(0, min(2, self.cb_train_src.currentIndex()))]
+        return ("xmp", "crop_only")[1 if self.cb_train_src.currentIndex() == 1 else 0]
 
     def _train_src_changed(self):
         self.cfg.update(train_src=self._train_src())
@@ -2572,8 +2554,7 @@ class MainWindow(QMainWindow):
 
     def _sync_add_button(self):
         self.b_add_train.setText(self._t({"xmp": "train_add_xmp",
-                                          "crop_only": "train_add_crop",
-                                          "pair": "train_add_pair"}[self._train_src()]))
+                                          "crop_only": "train_add_crop"}[self._train_src()]))
         self.b_add_train.setToolTip(self._t("train_src_tip"))
 
     def _pick_train_only(self):
@@ -2586,30 +2567,10 @@ class MainWindow(QMainWindow):
         self._train_dirs.append({"dir": d, "files": [], "n": None, "mode": "crop_only"})
         self._refresh_train_list()
 
-    def _pick_train_pair(self):
-        original = QFileDialog.getExistingDirectory(self, self._t("train_original"))
-        if not original:
-            return
-        export = QFileDialog.getExistingDirectory(self, self._t("train_export"))
-        if not export:
-            return
-        if os.path.samefile(original, export):
-            QMessageBox.warning(self, "", self._t("train_pair_same"))
-            return
-        export = os.path.normpath(export)
-        self._train_dirs = [e for e in self._train_dirs
-                            if os.path.normcase(e["dir"]) != os.path.normcase(export)]
-        self._train_dirs.append({"dir": export, "files": [], "n": None,
-                                 "original_dir": os.path.normpath(original),
-                                 "mode": "pair"})
-        self._refresh_train_list()
-
     def _pick_train_dir(self):
         src = self._train_src()
         if src == "crop_only":
             return self._pick_train_only()
-        if src == "pair":
-            return self._pick_train_pair()
         d = QFileDialog.getExistingDirectory(self, self._t("train_pick_xmp"))
         if d:
             d = os.path.normpath(d)
