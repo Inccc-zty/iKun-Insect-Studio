@@ -115,11 +115,13 @@ The app only puts the crop and the exposure on the sliders.
 |---|---|---|
 | **Recommended** | NVIDIA with 6 GB+ (RTX 2060 / 3060 and up) | 768 px runs comfortably, 1–2 s per photo |
 | **Usable** | NVIDIA 4 GB (GTX 1650, RTX 3050 laptop) | 512 is safe; 768 depends on desktop usage — the app drops to 512 or 384 when it gets tight |
-| **Marginal** | NVIDIA 2 GB | Mostly stuck at 384; masks get soft and small insects (under 10% of frame width) crop slightly off |
+| **Marginal** | NVIDIA 2 GB | Switch the mask to **384** manually and it runs steadily; masks are softer and small insects (under 10% of frame width) crop slightly off |
 | **No GPU / AMD / Intel** | Falls back to CPU | **145 s per photo** (measured) — about 4 hours for 100 frames. It works, but not for batches |
 
 Requires a CUDA 11.8 capable card (Maxwell sm_50 and newer, i.e. GTX 10 series onward); older cards
 fall back to CPU.
+
+Measured on one frame: 768 → 0.77 s, 512 → 0.50 s, 384 → 0.39 s; mask agreement with 768 is 0.962 and 0.928.
 
 When VRAM runs out: the app calls `torch.cuda.empty_cache()`, re-runs at half resolution (768→384) and
 flags the result as `degraded`, including a note in `params.csv`. It never returns a silently wrong box.
@@ -265,7 +267,7 @@ note in `params.csv`, or the frame is marked failed and the batch moves on.
 | Key | Values | Meaning |
 |---|---|---|
 | `mode` | `both` / `crop` / `exposure` | Everything / crop only / exposure only |
-| `seg_size` | `512` / `768` | Segmentation resolution; lower is faster and softer on small insects |
+| `seg_size` | `768` / `512` / `384` | Segmentation resolution; lower is faster and softer on small insects. 384 is the low-VRAM fallback |
 | `device` | `cuda` / `cpu` | Use cuda when an NVIDIA card is present |
 | `preview_enabled` | `true` / `false` | Live preview; off is noticeably faster |
 | `preview_exposure` | `true` / `false` | Exposure overlay, follows the live-preview switch |
