@@ -31,7 +31,7 @@
 
 需要 Windows 10/11 + NVIDIA 显卡（4 GB 显存起，2 GB 可跑 384 档）。
 
-**百度网盘备用**（提取码 8848）：https://pan.baidu.com/s/1jU0VFZo8SVXKQgvZ83TGPg?pwd=8848
+**百度网盘备用**（提取码 8848）：https://pan.baidu.com/s/1dkWKy9bxWnTreHFD5cCBVA?pwd=8848
 
 ---
 
@@ -68,4 +68,4 @@
 
 Windows 10/11 with an NVIDIA GPU (4 GB VRAM; 2 GB works at 384).
 
-**Baidu Netdisk mirror** (code 8848): https://pan.baidu.com/s/1jU0VFZo8SVXKQgvZ83TGPg?pwd=8848
+**Baidu Netdisk mirror** (code 8848): https://pan.baidu.com/s/1dkWKy9bxWnTreHFD5cCBVA?pwd=8848

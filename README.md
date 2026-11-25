@@ -1,6 +1,6 @@
 # iKun Insect Studio
 
-**[Download](https://pan.baidu.com/s/1jU0VFZo8SVXKQgvZ83TGPg?pwd=8848) (code 8848)** ·
+**[Download](https://pan.baidu.com/s/1dkWKy9bxWnTreHFD5cCBVA?pwd=8848) (code 8848)** ·
 **[Manual](docs/manual.en.md)** · **[Technical report](docs/report.en.md)** · [中文](README.zh-CN.md)
 
 ![iKun Insect Studio, English interface, a batch just finished](docs/media/hero.en.png)

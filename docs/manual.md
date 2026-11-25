@@ -13,7 +13,7 @@
 
 拖入文件夹 → 逐张出掩膜、框、头点 → 结束时在每张 RAW 旁边写一个 `.xmp`。全程不用点第二次。
 
-**下载**：[百度网盘](https://pan.baidu.com/s/1jU0VFZo8SVXKQgvZ83TGPg?pwd=8848)（提取码 **8848**）
+**下载**：[百度网盘](https://pan.baidu.com/s/1dkWKy9bxWnTreHFD5cCBVA?pwd=8848)（提取码 **8848**）
 
 文件是 `iKunInsectStudio.zip`，约 2.6 GB。下载后解压，得到 `iKunInsectStudio` 文件夹，
 双击里面的 `iKunInsectStudio.exe` 即可 —— **整个文件夹要一起留着**，不能只拷 exe。

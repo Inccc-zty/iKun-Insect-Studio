@@ -12,7 +12,7 @@
 
 需要 Windows 10/11 + NVIDIA 显卡（4 GB 显存起）。首次启动预读模型约 10–20 秒。
 
-**百度网盘备用**（提取码 8848）：https://pan.baidu.com/s/1jU0VFZo8SVXKQgvZ83TGPg?pwd=8848
+**百度网盘备用**（提取码 8848）：https://pan.baidu.com/s/1dkWKy9bxWnTreHFD5cCBVA?pwd=8848
 
 ---
 
@@ -30,4 +30,4 @@ A day out shooting means one record frame per individual. In macro work the inse
 
 Windows 10/11 with an NVIDIA GPU (4 GB VRAM and up). Models preload for ~10–20 s on first launch.
 
-**Baidu Netdisk mirror** (code 8848): https://pan.baidu.com/s/1jU0VFZo8SVXKQgvZ83TGPg?pwd=8848
+**Baidu Netdisk mirror** (code 8848): https://pan.baidu.com/s/1dkWKy9bxWnTreHFD5cCBVA?pwd=8848
