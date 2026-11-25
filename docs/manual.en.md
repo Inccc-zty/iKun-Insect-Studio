@@ -1,3 +1,10 @@
+# iKun Insect Studio · Manual
+
+> For people already shooting insects and editing in Lightroom, Camera Raw or an equivalent.
+> 中文版：[manual.md](manual.md)
+
+---
+
 ## 0 See it run
 
 <video src="media/demo.mp4" controls width="100%"></video>
@@ -13,15 +20,8 @@ Put both parts in one folder, run `join-parts.bat`, unzip, keep the whole `iKunI
 together and run `iKunInsectStudio.exe` — do not copy the exe out on its own.
 
 
-
 ---
 
-# iKun Insect Studio · Manual
-
-> For people already shooting insects and editing in Lightroom, Camera Raw or an equivalent.
-> 中文版：[manual.md](manual.md)
-
----
 
 ## 1 What it is
 
