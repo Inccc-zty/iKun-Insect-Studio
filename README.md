@@ -31,6 +31,10 @@ This app does those two jobs and writes the result as a sidecar `.xmp` your edit
 - **Exposure** — two p95 brightness numbers (inside the mask / background inside the box) into one
   straight line; hold-out MAE **0.29 EV** (constant baseline 0.41). An estimate: treat it as a start.
 - **Sharpening** — by aperture, strictly increasing (20 → 65).
+- **Learns your framing** — point it at a folder of your own finished JPEGs and the crop model refits
+  to your composition. No originals, no XMP: an export already *is* the crop, so the app measures how
+  much of the frame the insect takes and inverts that into a box. Bring RAW+XMP sidecars instead if
+  you still have the edits.
 
 **Writes a sidecar `.xmp`**: the RAW stays as shot, and your white balance, colour and contrast carry over as they are — everything applies on import.
 
