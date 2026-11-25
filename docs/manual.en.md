@@ -6,10 +6,11 @@
 
 Drop a folder → mask, boxes and head point appear per photo → an `.xmp` lands beside every RAW.
 
-**Download**: [Baidu Netdisk](https://pan.baidu.com/s/1dkWKy9bxWnTreHFD5cCBVA?pwd=8848) (code **8848**)
+**Download**: use **[GitHub Releases](https://github.com/Inccc-zty/iKun-Insect-Studio/releases)** first (two parts + `join-parts.bat`, about 2.6 GB).
+If GitHub is slow or the transfer keeps dropping, use the [Baidu Netdisk](https://pan.baidu.com/s/1dkWKy9bxWnTreHFD5cCBVA?pwd=8848) mirror (code **8848**).
 
-The file is `iKunInsectStudio.zip`, about 2.6 GB. Unzip it, keep the whole `iKunInsectStudio` folder
-together, and run `iKunInsectStudio.exe` — do not copy the exe out on its own.
+Put both parts in one folder, run `join-parts.bat`, unzip, keep the whole `iKunInsectStudio` folder
+together and run `iKunInsectStudio.exe` — do not copy the exe out on its own.
 
 
 
