@@ -106,6 +106,26 @@ The app only puts the crop and the exposure on the sliders.
 
 ---
 
+> **GPU**: NVIDIA, 4 GB of VRAM and up. See the table below — running out of VRAM does not crash
+> anything, the app falls back to 384 px and keeps going, with slightly softer masks for small insects.
+
+### GPU requirements (measured)
+
+| Tier | Hardware | Reality |
+|---|---|---|
+| **Recommended** | NVIDIA with 6 GB+ (RTX 2060 / 3060 and up) | 768 px runs comfortably, 1–2 s per photo |
+| **Usable** | NVIDIA 4 GB (GTX 1650, RTX 3050 laptop) | 512 is safe; 768 depends on desktop usage — the app drops to 512 or 384 when it gets tight |
+| **Marginal** | NVIDIA 2 GB | Mostly stuck at 384; masks get soft and small insects (under 10% of frame width) crop slightly off |
+| **No GPU / AMD / Intel** | Falls back to CPU | **145 s per photo** (measured) — about 4 hours for 100 frames. It works, but not for batches |
+
+Requires a CUDA 11.8 capable card (Maxwell sm_50 and newer, i.e. GTX 10 series onward); older cards
+fall back to CPU.
+
+When VRAM runs out: the app calls `torch.cuda.empty_cache()`, re-runs at half resolution (768→384) and
+flags the result as `degraded`, including a note in `params.csv`. It never returns a silently wrong box.
+
+---
+
 ## 4 How to run your first batch
 
 1. Drop **a folder**, or **a batch of photos**, onto the window
