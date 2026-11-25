@@ -244,7 +244,38 @@ Dark mode:
 
 ---
 
-## 9 FAQ
+## 9 When something goes wrong
+
+The rule is simple: **it never quietly returns a wrong result.** Every failure leaves a trace — either a
+note in `params.csv`, or the frame is marked failed and the batch moves on.
+
+| Symptom | Cause | What the app does |
+|---|---|---|
+| Mask looks soft, small insects crop slightly off | Not enough VRAM | Clears the cache, re-runs 768 → 384, flags `degraded` with a note; never crashes |
+| One to two minutes per photo | No CUDA (AMD / Intel / iGPU / too old a card) | Falls back to CPU: 145 s per photo measured, ~4 h for 100 frames |
+| Crashes on launch | Only the exe was copied, `_internal` was left behind | Fails immediately. **Keep the whole folder together** |
+| One frame keeps failing | File locked / folder read-only / broken RAW | Marks that frame `FAILED`, draws a red frame in the sheet, continues |
+| Nothing changes in the editor | The batch ran before the import | Select all → right click → Read metadata from file |
+
+### Where the settings live
+
+`data/config.json`; the switches in the UI write to it. Deleting the file restores the defaults
+(`重置到初始状态.bat` does this too, and **keeps the models you trained**).
+
+| Key | Values | Meaning |
+|---|---|---|
+| `mode` | `both` / `crop` / `exposure` | Everything / crop only / exposure only |
+| `seg_size` | `512` / `768` | Segmentation resolution; lower is faster and softer on small insects |
+| `device` | `cuda` / `cpu` | Use cuda when an NVIDIA card is present |
+| `preview_enabled` | `true` / `false` | Live preview; off is noticeably faster |
+| `preview_exposure` | `true` / `false` | Exposure overlay, follows the live-preview switch |
+| `coef` / `ev_coef` | model path, empty = built-in | Where trained models go |
+| `xmp_policy` | `protect` / `overwrite` | Existing XMPs: fill only untouched ones / rewrite all |
+| `sharpen_enable` | `true` / `false` | Write the aperture-based sharpening amount |
+
+---
+
+## 10 FAQ
 
 **Q: Nothing changed in my software.**
 A: Check whether the run happened **before** import. A run before import is picked up automatically;
@@ -262,7 +293,7 @@ A: 1–3 s per photo on a GPU; faster with live preview off.
 
 ---
 
-## 10 Known limits
+## 11 Known limits
 
 1. **No rotated crops.** About 8% of your finished crops are rotated; the app only produces
    axis-aligned boxes, so those will not match. May be added later.
@@ -274,7 +305,7 @@ A: 1–3 s per photo on a GPU; faster with live preview off.
 
 ---
 
-## 11 Why it is 4.4 GB
+## 12 Why it is 4.4 GB
 
 Unzip it and you get a 4.4 GB folder with **not a single photo** in it. The breakdown:
 
