@@ -37,6 +37,16 @@ def store_dir(kind: str) -> str:
 
 def _peek(path: str, kind: str):
     d = json.load(open(path, encoding="utf-8"))
+    if kind == "crop" and d.get("space") == "crop_relative":
+        need = ("coef_t0", "coef_t1", "coef_ox", "coef_oy", "mu", "sd")
+        for k in need:
+            if k not in d:
+                raise ValueError(f"缺少 {k}")
+        n = len(d["coef_t0"])
+        if not all(len(d[k]) == n for k in ("coef_t1", "coef_ox", "coef_oy", "mu", "sd")):
+            raise ValueError("系数长度不一致（成片相对空间）")
+        return {"n": d.get("n") or n, "metric": None, "space": "crop_relative",
+                "fitted": d.get("fitted") or d.get("version") or ""}
     if kind == "crop":
         for k in ("coef_cx", "coef_cy", "coef_log2w"):
             if k not in d:

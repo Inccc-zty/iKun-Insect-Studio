@@ -204,46 +204,63 @@ geometrically similar frames (nearest-neighbour from 3 records, a 7-parameter li
 
 Use it when your subject matter differs a lot from the built-in set (all super-macro, all groups).
 
-Training needs **pairs**: the uncropped frame, and what you finally cropped it to. From that pair the
-app learns where you put the box and how large you make it.
+What the model learns is one sentence: **given a bug like this, where should the frame sit and how
+big should it be.** That can be measured two equivalent ways, hence two entry points.
 
-#### Three kinds of input
+#### Entry 1: originals (RAW or full-frame JPG) + sidecar XMP
 
-| Input | How to add it | Note |
-|---|---|---|
-| **① RAW + sidecar XMP** | Train tab → **Add folder**, pick the RAW folder | The common case; the XMP holds your crop box |
-| **② Full-frame JPG + sidecar XMP** | Same, pick the JPG folder | Shot in JPEG, or exported uncropped |
-| **③ Cropped JPEG exports** | Train tab → **Add originals and JPEG exports**, pick originals first, then exports | For when there is no XMP; the app recovers the box from the pixels |
+Train tab → **Add folder**, pick the folder with the originals.
 
-For ③ the two folders must line up:
+The XMP states your crop box in the original's full-frame coordinates — the most direct ground truth
+there is. RAW and full-frame JPG both work: each is "the whole uncropped frame", only the file format
+differs.
 
-- **same file names** (`Z04_1234.NEF` ↔ `Z04_1234.JPG`)
-- **same subfolder structure** (`\Lingshan\` on both sides)
-- the app verifies each pair by feature registration and that the crop is axis-aligned; **unverified
-  pairs are skipped**, never forced into the training set
+#### Entry 2: finished JPEG exports only
 
-#### Why XMP used to be mandatory
+Train tab → **Add JPEG exports only**, pick the export folder. **No originals, no XMP.**
 
-An XMP states your crop box **in the original's full-frame coordinates** (`crop:CropLeft/Top/Right/Bottom`).
-That is the one value nobody has to guess: the app knows exactly which part of the frame you kept.
+Why it works: an export *is* the frame after cropping. Run the mask on it and three things are
+directly measurable —
 
-The crop model learns «image features → crop box». The features come from the mask (how big the insect
-is, where it sits, which way the head points); the box came from the XMP. Without the second half there
-is nothing to fit against.
+- how much of the frame the insect takes (`1/body width`, `1/body height`, frame = 1)
+- how far the body centre sits from the frame centre (`ox`, `oy`)
+- head direction, limb share, body aspect (dispersion, aspect ratio, limb ratio)
 
-#### Is a cropped JPEG without XMP enough?
+Those ratios are properties of the animal, not of the frame size, so the numbers measured on an export
+are the same numbers you would get on the original. The model therefore learns
 
-**Yes — as long as the uncropped original is there too.** That is case ③.
+    shape → "the frame should be N× the body width, offset by this much"
 
-The app registers the export against the original, works out which region of the original it corresponds
-to, and normalises that into the same crop box an XMP would have given. Measured on three different
-crop positions, the recovered box matched to **0.000** in normalised coordinates.
+and inference inverts it:
 
-**A cropped JPEG on its own is not enough**: the discarded part of the frame is gone, so there is no way
-to know where that piece sat or how big it was. Such files can serve as style reference only.
+    frame width W = body width × 2^t0
+    frame centre = body centre − (ox·W, oy·H)
 
-> The test is simple: can you get **both** «the whole frame» and «the crop box» out of this data?
-> If yes it can train; if not it can only be looked at.
+No originals needed, no XMP needed — an original is just *another way to measure*, not a prerequisite.
+
+> Closed-form check: generate exports with a known rule (width = body width × (4 + 0.6·limb ratio),
+> aspect 1.25, body offset (+2%, +3%)), train on the exports only, then invert on 60 unseen frames:
+> **median IoU 0.9997**. The mechanism loses no information.
+
+#### Entry 3: exports plus their uncropped originals
+
+Train tab → **Add originals and JPEG exports**; pick originals first, then exports.
+
+One extra step over entry 2: feature registration confirms the pair really is the same photo and that
+the crop is axis-aligned, then the box lands in the original's coordinate system. **Unverified pairs are
+skipped**, never coerced. Same names and matching subfolders are required; two candidate originals with
+the same stem are rejected outright.
+
+#### Which to use
+
+| What you have | Which entry |
+|---|---|
+| RAW or full-frame JPG + sidecar XMP | Entry 1 (least work) |
+| Finished exports, no originals | Entry 2 |
+| Exports plus uncropped originals | Entry 3 (labels in original coordinates, most robust) |
+
+All three need **at least 50 photos**. The output is a coefficient file; once adopted it can be switched
+in the app.
 
 > Both are in the app, but **neither is a step in the workflow**. In normal use you finish ③ and go
 > straight to Lightroom.

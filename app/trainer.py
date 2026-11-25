@@ -23,7 +23,7 @@ import time
 
 import numpy as np
 
-from . import crop_pair, models, rawio, xmpio
+from . import crop_pair, crop_rel, models, rawio, xmpio
 
 import sys as _sys
 from .paths import app_root, skill_dir
@@ -79,11 +79,12 @@ class Trainer:
                 original = r.get("original_dir")
                 if original and not os.path.isdir(original):
                     return False, "原图目录不存在 / Original folder is missing"
-                entries.append({"dir": d, "files": fs, "original_dir": original})
+                entries.append({"dir": d, "files": fs, "original_dir": original,
+                                "mode": r.get("mode") or ("pair" if original else "xmp")})
             else:
                 d = os.path.normpath(r) if r else ""
                 if d and os.path.isdir(d):
-                    entries.append({"dir": d, "files": []})
+                    entries.append({"dir": d, "files": [], "original_dir": None, "mode": "xmp"})
         if not entries:
             return False, "先选至少一个存在的目录"
         with self.lock:
@@ -96,6 +97,7 @@ class Trainer:
             self.report = {}
             self._stop = False
             self._pause = False
+            self._relative_done = False
             self.roots = [e["dir"] for e in entries]
         self.thread = threading.Thread(target=self._run, args=(entries, subdir), daemon=True)
         self.thread.start()
@@ -124,6 +126,8 @@ class Trainer:
     def _run(self, roots, subdir):
         try:
             self._extract(roots, subdir)
+            if getattr(self, "_relative_done", False):
+                return                      # 成片相对空间：提取与拟合已在内部完成
             if self._stop:
                 raise RuntimeError("已停止")
             self._fit()
@@ -141,6 +145,8 @@ class Trainer:
 
     # ---------------------------------------------------------------- ① 扫描 + ② 提取
     def _extract(self, entries, subdir):
+        if any(e.get("mode") == "crop_only" for e in entries):
+            return self._extract_relative([e for e in entries if e.get("mode") == "crop_only"], subdir)
         pairs, seen = [], set()
         for ent in entries:
             if self._stop:
@@ -261,6 +267,90 @@ class Trainer:
         self._say(f"写出 {csvp}（{len(rows)} 行）")
         self.train_csv = csvp
         self.rows = rows
+
+    def _extract_relative(self, entries, subdir):
+        """只用成品 JPG：在成片自己身上量「虫体占画面多少、偏在哪」，
+        拟合成「虫体 → 成片」的相对关系，推理时反解裁切框。不需要原图、不需要 XMP。"""
+        files, groups = [], {}
+        for ent in entries:
+            root, selected = ent["dir"], ent["files"]
+            fs = selected or rawio.scan_image_dir(root, self.cfg.get("recursive"))
+            fs = [p for p in fs if crop_pair.is_jpeg(p)]
+            self._say(f"{os.path.basename(root)}：{len(fs)} 张成品 JPG")
+            for p in fs:
+                files.append(p); groups[p] = _cache_key(os.path.dirname(p))
+        if len(files) < 50:
+            raise RuntimeError(f"成品 JPG 只有 {len(files)} 张，至少 50 张才能拟合 / "
+                               f"Need 50+ JPEG exports, got {len(files)}")
+
+        stamp = time.strftime("%Y%m%d_%H%M")
+        self.out_dir = os.path.join(OUT_ROOT, f"train_{stamp}")
+        os.makedirs(self.out_dir, exist_ok=True)
+        with self.lock:
+            self.state = "extract"; self.msg = "提取（成片相对空间）"
+        self.engine._ensure_models()
+
+        rows_rel, bad = [], 0
+        t0 = time.time()
+        for i, p in enumerate(files, 1):
+            if self._stop:
+                raise RuntimeError("已停止")
+            while self._pause and not self._stop:
+                time.sleep(0.2)
+            try:
+                prev = rawio.preview_pil(p)
+                res = mask_head.analyze(prev, dev=self.engine.model_dev,
+                                        size=int(self.cfg.get("seg_size")), want_head=True)
+                if not res.get("ok"):
+                    bad += 1; continue
+                nsub = mask_head.count_subjects(res["mask"])
+                head = res["head"] if nsub <= 1 else None
+                aspect = prev.size[0] / max(prev.size[1], 1)
+                rows_rel.append((res["core"], res["full"], head, nsub > 1, aspect, p,
+                                 groups[p]))
+            except Exception as e:      # noqa: BLE001
+                bad += 1
+                self._say(f"跳过 {os.path.basename(p)}: {type(e).__name__}")
+            with self.lock:
+                self.progress = 100.0 * i / len(files)
+                self.msg = f"提取 {i}/{len(files)}（跳过 {bad}）"
+            if i % 20 == 0:
+                el = time.time() - t0
+                self._say(f"{i}/{len(files)}  平均 {el/i:.2f}s/张")
+
+        self._say(f"可用于训练的成片 {len(rows_rel)} 张（跳过 {bad}）")
+        if len(rows_rel) < 50:
+            raise RuntimeError(f"有效成片 {len(rows_rel)}/50，无法拟合")
+
+        with self.lock:
+            self.state = "fit"; self.msg = "拟合（成片相对空间）"
+        J = crop_rel.fit([r[:5] for r in rows_rel])
+        J["fitted"] = time.strftime("%Y-%m-%d %H:%M")
+        J["groups"] = sorted({r[6] for r in rows_rel})
+        cpath = os.path.join(self.out_dir, "crop_coef.json")
+        json.dump(J, open(cpath, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        rep = {"crop": {"space": "crop_relative", "n": J["n"], "mae_in": J["mae_in"]}}
+        rep["crop"]["adopted"] = models.adopt_trained("crop", cpath)   # 收不进去就等于没训练，直接报错
+        self._say(f"已收进模型库：{rep['crop']['adopted']}")
+        with open(os.path.join(self.out_dir, "trainset.csv"), "w", newline="",
+                  encoding="utf-8-sig") as f:
+            w = csv.writer(f)
+            w.writerow(["image", "group", "core_l", "core_t", "core_r", "core_b",
+                        "full_l", "full_t", "full_r", "full_b", "multi", "aspect"])
+            for core, full, head, multi, aspect, p, g in rows_rel:
+                w.writerow([p, g, *[round(v, 6) for v in core], *[round(v, 6) for v in full],
+                            int(multi), round(aspect, 4)])
+        md = [f"# 训练报告 {time.strftime('%Y-%m-%d %H:%M')}", "",
+              "空间：成片相对（不需要原图与 XMP）", "```",
+              json.dumps(rep, ensure_ascii=False, indent=1), "```"]
+        open(os.path.join(self.out_dir, "report.md"), "w", encoding="utf-8").write("\n".join(md))
+        with self.lock:
+            self.report = rep
+            self.state = "done"
+            self.msg = "完成"
+            self.progress = 100.0
+        self._relative_done = True
+        self._say("完成")
 
     # ---------------------------------------------------------------- ③ 拟合
     def _fit(self):

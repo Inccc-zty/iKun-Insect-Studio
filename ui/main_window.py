@@ -123,6 +123,9 @@ TEXT = {
         "train_group": "从「原片 + 同名 XMP」重拟合",
         "train_ph": "选多少个目录都行，会各自递归扫描",
         "train_pair": "添加原图与成品 JPG",
+        "train_only": "添加成品 JPG",
+        "train_only_tip": "只有裁好的成片也行：成片自己就是裁切结果，软件从中量出“虫占多少、偏在哪”，反解裁切框。",
+        "train_only_pick": "选择成品 JPG 目录（不用原图、不用 XMP）",
         "train_original": "选择未裁切原图目录",
         "train_export": "选择对应的成品 JPG 目录",
         "train_pair_tip": "原图：{p}\n成品与原图须同名且子目录对应。仅有成品时需补原图。",
@@ -267,6 +270,9 @@ TEXT = {
         "train_group": "Refit from RAW + sidecar XMP",
         "train_ph": "Pick one or more folders; each is scanned recursively",
         "train_pair": "Add originals and JPEG exports",
+        "train_only": "Add JPEG exports only",
+        "train_only_tip": "Exports alone are enough: the crop IS the framing, so the app measures how much of the frame the insect takes and where it sits, then inverts that into a crop box.",
+        "train_only_pick": "Pick the folder of finished JPEGs (no originals, no XMP)",
         "train_original": "Select the uncropped originals folder",
         "train_export": "Select the matching JPEG exports folder",
         "train_pair_tip": "Originals: {p}\nUse matching names and subfolders. JPEG exports require their originals.",
@@ -1463,6 +1469,10 @@ class MainWindow(QMainWindow):
         self.b_add_train = _mini(QPushButton(self._t("add_train")))
         self.b_add_train.setObjectName("ghost")
         self.b_add_train.clicked.connect(self._pick_train_dir)
+        self.b_train_only = _mini(QPushButton(self._t("train_only")))
+        self.b_train_only.setObjectName("ghost")
+        self.b_train_only.setToolTip(self._t("train_only_tip"))
+        self.b_train_only.clicked.connect(self._pick_train_only)
         self.b_train_pair = _mini(QPushButton(self._t("train_pair")))
         self.b_train_pair.setObjectName("ghost")
         self.b_train_pair.clicked.connect(self._pick_train_pair)
@@ -1481,7 +1491,7 @@ class MainWindow(QMainWindow):
         self.b_pause_train.clicked.connect(self._toggle_pause_train)
         self.b_pause_train.setEnabled(False)
         self.b_del_train.hide()
-        for b in (self.b_add_train, self.b_train_pair, self.b_clear_train):
+        for b in (self.b_add_train, self.b_train_only, self.b_train_pair, self.b_clear_train):
             row.addWidget(b)
         row.addStretch(1)
         row.addWidget(self.b_pause_train)
@@ -1972,6 +1982,8 @@ class MainWindow(QMainWindow):
         self.l_train_dirs.setText(self._t("train_dirs"))
         self.b_add_train.setText(self._t("add_train"))
         self.b_train_pair.setText(self._t("train_pair"))
+        self.b_train_only.setText(self._t("train_only"))
+        self.b_train_only.setToolTip(self._t("train_only_tip"))
         self.b_del_train.setText(self._t("del_train"))
         self.b_clear_train.setText(self._t("clear_train"))
         self.t_go.setText(self._t("train_go"))
@@ -2466,7 +2478,8 @@ class MainWindow(QMainWindow):
             if isinstance(r, dict):
                 d = r.get("dir") or ""
                 out.append({"dir": d, "files": list(r.get("files") or []),
-                            "n": r.get("n"), "original_dir": r.get("original_dir")})
+                            "n": r.get("n"), "original_dir": r.get("original_dir"),
+                            "mode": r.get("mode")})
             elif isinstance(r, str) and r:
                 out.append({"dir": r, "files": [], "n": None})
         return out
@@ -2491,7 +2504,9 @@ class MainWindow(QMainWindow):
             it = QListWidgetItem()
             it.setToolTip(f"{e['dir']}\n" + (self._t("train_tip_files", n=n) if e.get("files")
                                               else self._t("train_tip_dir", n=n)))
-            if e.get("original_dir"):
+            if e.get("mode") == "crop_only":
+                name = f"{name} · {self._t('train_only')}"
+            elif e.get("original_dir"):
                 name = f"{name} · {self._t('train_pair')}"
                 it.setToolTip(f"{e['dir']}\n" + self._t("train_pair_tip", p=e["original_dir"]))
             it.setSizeHint(QSize(120, 26))
@@ -2511,8 +2526,19 @@ class MainWindow(QMainWindow):
             hb.addWidget(btn)
             self.train_list.setItemWidget(it, holder)
         self.cfg.update(train_dirs=[{"dir": e["dir"], "files": e.get("files") or [],
-                                     "original_dir": e.get("original_dir")}
+                                     "original_dir": e.get("original_dir"),
+                                     "mode": e.get("mode")}
                                     for e in self._train_dirs])
+
+    def _pick_train_only(self):
+        d = QFileDialog.getExistingDirectory(self, self._t("train_only_pick"))
+        if not d:
+            return
+        d = os.path.normpath(d)
+        self._train_dirs = [e for e in self._train_dirs
+                            if os.path.normcase(e["dir"]) != os.path.normcase(d)]
+        self._train_dirs.append({"dir": d, "files": [], "n": None, "mode": "crop_only"})
+        self._refresh_train_list()
 
     def _pick_train_pair(self):
         original = QFileDialog.getExistingDirectory(self, self._t("train_original"))

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "date": "2026-11-25",
-  "notes": "训练支持 RAW+XMP / 全幅 JPG+XMP / 只有成品 JPG（需配原图）；配准复原裁切框，误差 0.000。缓存按精度分键，样本不足报数。",
-  "url": "https://github.com/Inccc-zty/iKun-Insect-Studio/releases/tag/v1.0.2"
+  "notes": "裁切训练新增「添加成品 JPG」：只要修好的成片就能训练，不需要原图与 XMP；训练产物必定进模型库。",
+  "url": "https://github.com/Inccc-zty/iKun-Insect-Studio/releases/tag/v1.0.3"
 }

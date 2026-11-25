@@ -585,7 +585,14 @@ class Engine:
                 J = None
             if c_warn:
                 out["coef_warn"] = c_warn
-            cr = crop_v3.compute_crop(core, full, head, multi=(nsub > 1), J=J)
+            if (J or {}).get("space") == "crop_relative":
+                from . import crop_rel
+                _w, _h = prev.size
+                cr = crop_rel.compute_crop(core, full, head, multi=(nsub > 1), J=J,
+                                           aspect=_w / max(_h, 1))
+                out["crop_space"] = "crop_relative"
+            else:
+                cr = crop_v3.compute_crop(core, full, head, multi=(nsub > 1), J=J)
             out.update(crop=[round(v, 5) for v in cr["crop"]], w=round(cr["w"], 4),
                        cx=round(cr["cx"], 4), cy=round(cr["cy"], 4),
                        canvas_limited=bool(cr["canvas_limited"]),
