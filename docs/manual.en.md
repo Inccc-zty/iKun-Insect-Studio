@@ -202,15 +202,48 @@ geometrically similar frames (nearest-neighbour from 3 records, a 7-parameter li
 
 ### 7.2 Training your own crop model
 
-When: your subjects look very different from the built-in set (all super-macro, all groups).
+Use it when your subject matter differs a lot from the built-in set (all super-macro, all groups).
 
-How: Train tab → add folders → Start. It uses **your own edited photos with XMP sidecars**,
-reads how you actually cropped, and fits a new set of coefficients. The result sits alongside the
-built-in model and you can switch back at any time.
+Training needs **pairs**: the uncropped frame, and what you finally cropped it to. From that pair the
+app learns where you put the box and how large you make it.
 
-- Needs **at least a few dozen** edited photos; more is better
-- The output is a coefficient file only, no images, easy to copy elsewhere
-- Again: nothing changes inside Lightroom
+#### Three kinds of input
+
+| Input | How to add it | Note |
+|---|---|---|
+| **① RAW + sidecar XMP** | Train tab → **Add folder**, pick the RAW folder | The common case; the XMP holds your crop box |
+| **② Full-frame JPG + sidecar XMP** | Same, pick the JPG folder | Shot in JPEG, or exported uncropped |
+| **③ Cropped JPEG exports** | Train tab → **Add originals and JPEG exports**, pick originals first, then exports | For when there is no XMP; the app recovers the box from the pixels |
+
+For ③ the two folders must line up:
+
+- **same file names** (`Z04_1234.NEF` ↔ `Z04_1234.JPG`)
+- **same subfolder structure** (`\Lingshan\` on both sides)
+- the app verifies each pair by feature registration and that the crop is axis-aligned; **unverified
+  pairs are skipped**, never forced into the training set
+
+#### Why XMP used to be mandatory
+
+An XMP states your crop box **in the original's full-frame coordinates** (`crop:CropLeft/Top/Right/Bottom`).
+That is the one value nobody has to guess: the app knows exactly which part of the frame you kept.
+
+The crop model learns «image features → crop box». The features come from the mask (how big the insect
+is, where it sits, which way the head points); the box came from the XMP. Without the second half there
+is nothing to fit against.
+
+#### Is a cropped JPEG without XMP enough?
+
+**Yes — as long as the uncropped original is there too.** That is case ③.
+
+The app registers the export against the original, works out which region of the original it corresponds
+to, and normalises that into the same crop box an XMP would have given. Measured on three different
+crop positions, the recovered box matched to **0.000** in normalised coordinates.
+
+**A cropped JPEG on its own is not enough**: the discarded part of the frame is gone, so there is no way
+to know where that piece sat or how big it was. Such files can serve as style reference only.
+
+> The test is simple: can you get **both** «the whole frame» and «the crop box» out of this data?
+> If yes it can train; if not it can only be looked at.
 
 > Both are in the app, but **neither is a step in the workflow**. In normal use you finish ③ and go
 > straight to Lightroom.

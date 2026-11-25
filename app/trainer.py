@@ -23,7 +23,7 @@ import time
 
 import numpy as np
 
-from . import models, rawio, xmpio
+from . import crop_pair, models, rawio, xmpio
 
 import sys as _sys
 from .paths import app_root, skill_dir
@@ -40,7 +40,7 @@ OUT_ROOT = os.path.join(ROOT, "data")
 FIELDS = ["group", "jpg", "nef", "crop_l", "crop_t", "crop_r", "crop_b",
           "core_l", "core_t", "core_r", "core_b",
           "full_l", "full_t", "full_r", "full_b",
-          "hx", "hy", "multi", "EV", "T", "Tint", "fnumber", "L_in", "L_box"]
+          "hx", "hy", "multi", "EV", "T", "Tint", "fnumber", "L_in", "L_box", "label_path"]
 
 
 class Trainer:
@@ -74,7 +74,12 @@ class Trainer:
                     continue
                 fs = [os.path.normpath(f) for f in (r.get("files") or [])
                       if f and os.path.isfile(f)]
-                entries.append({"dir": d, "files": fs})
+                if r.get("files") and not fs:
+                    continue
+                original = r.get("original_dir")
+                if original and not os.path.isdir(original):
+                    return False, "原图目录不存在 / Original folder is missing"
+                entries.append({"dir": d, "files": fs, "original_dir": original})
             else:
                 d = os.path.normpath(r) if r else ""
                 if d and os.path.isdir(d):
@@ -122,6 +127,8 @@ class Trainer:
             if self._stop:
                 raise RuntimeError("已停止")
             self._fit()
+            if "error" in self.report.get("crop", {}):
+                raise RuntimeError(self.report["crop"]["error"])
             with self.lock:
                 self.state = "done"
                 self.msg = "完成"
@@ -134,25 +141,46 @@ class Trainer:
 
     # ---------------------------------------------------------------- ① 扫描 + ② 提取
     def _extract(self, entries, subdir):
-        files, groups = [], {}
+        pairs, seen = [], set()
         for ent in entries:
-            root, sel = ent["dir"], ent["files"]
-            if sel:
-                fs = [p for p in sel if rawio.is_image(p)]
-                self._say(f"{os.path.basename(root)}：用你挑的 {len(fs)} 张")
-            else:
-                self._say(f"扫描 {root}")
-                fs = rawio.scan_image_dir(root, self.cfg.get("recursive"))
-                self._say(f"  {len(fs)} 张")
-            for p in fs:
-                files.append(p)
-                groups[p] = _group_of(p, root)
-        pairs = []
-        for p in files:
-            t = xmpio.read_truth(p)
-            if t and t.get("HasCrop") and all(k in t for k in
-                                              ("CropLeft", "CropTop", "CropRight", "CropBottom")):
-                pairs.append((p, t))
+            if self._stop:
+                raise RuntimeError("已停止")
+            root, selected = ent["dir"], ent["files"]
+            files = selected or rawio.scan_image_dir(root, self.cfg.get("recursive"))
+            original = ent.get("original_dir")
+            for path in files:
+                while self._pause and not self._stop:
+                    time.sleep(0.2)
+                if self._stop:
+                    raise RuntimeError("已停止")
+                if not original and rawio.is_image(path):
+                    target = xmpio.read_truth(path)
+                    source = path
+                    label = xmpio.sidecar_path(path)
+                elif original and crop_pair.is_jpeg(path):
+                    try:
+                        source, target = crop_pair.match_export(path, root, original, rawio)
+                    except Exception:      # noqa: BLE001  单张读不了就跳过，不中断整批
+                        source, target = None, None
+                    label = path
+                    if target is None:
+                        self._say(f"未能验证裁切配对 / Crop match rejected: {path}")
+                else:
+                    continue
+                if not target or not target.get("HasCrop"):
+                    continue
+                coords = [target.get(k) for k in crop_pair.BOUNDS]
+                if any(v is None or not math.isfinite(v) for v in coords):
+                    continue
+                left, top, right, bottom = coords
+                if right - left <= 0.01 or bottom - top <= 0.01:
+                    continue
+                key = _cache_key(source)
+                if key in seen:
+                    continue
+                seen.add(key)
+                group = _group_of(source, original or root)
+                pairs.append((source, target, group, label))
         self._say(f"已加载 {len(pairs)} 张照片（有裁切真值）")
         if len(pairs) < 50:
             raise RuntimeError("可用样本少于 50 张，无法拟合")
@@ -170,24 +198,25 @@ class Trainer:
         cache = _load_cache()
         reused = 0
         t0 = time.time()
-        for i, (p, t) in enumerate(pairs, 1):
+        for i, (p, t, group, label) in enumerate(pairs, 1):
             if self._stop:
                 raise RuntimeError("已停止")
             while getattr(self, "_pause", False) and not self._stop:
                 time.sleep(0.2)
             key = _cache_key(p)
             hit = cache.get(key)
-            if hit and abs(hit.get("mtime", 0) - _mtime(p)) < 1:
-                rows.append(hit["row"])
+            seg_size = int(self.cfg.get("seg_size"))
+            if hit and hit.get("seg_size") == seg_size and hit.get("mtime") == _mtime(p):
+                rows.append(_with_label(hit["row"], t, group, label))
                 reused += 1
                 with self.lock:
-                    self.progress = 100.0 * i / max(len(pairs), 1)
+                    self.progress = 100.0 * i / len(pairs)
                     self.msg = f"复用 {reused} 张（已提取过）"
                 continue
             try:
                 prev = rawio.preview_pil(p)
                 res = mask_head.analyze(
-                    prev, dev=self.engine.model_dev, size=int(self.cfg.get("seg_size")),
+                    prev, dev=self.engine.model_dev, size=seg_size,
                     want_head=True)
                 if not res.get("ok"):
                     continue
@@ -196,10 +225,7 @@ class Trainer:
                 core, full = res["core"], res["full"]
                 me = exposure_model.measure_pil(prev, res["mask"], full)
                 row = {
-                    "group": groups.get(p) or os.path.dirname(p),
                     "jpg": p, "nef": p,
-                    "crop_l": t["CropLeft"], "crop_t": t["CropTop"],
-                    "crop_r": t["CropRight"], "crop_b": t["CropBottom"],
                     "core_l": round(core[0], 6), "core_t": round(core[1], 6),
                     "core_r": round(core[2], 6), "core_b": round(core[3], 6),
                     "full_l": round(full[0], 6), "full_t": round(full[1], 6),
@@ -207,15 +233,12 @@ class Trainer:
                     "hx": "" if head is None else round(head[0], 6),
                     "hy": "" if head is None else round(head[1], 6),
                     "multi": int(nsub > 1),
-                    "EV": t.get("Exposure2012", ""),
-                    "T": t.get("Temperature", ""),
-                    "Tint": t.get("Tint", ""),
                     "fnumber": "",
                     "L_in": "" if me.get("L_in") is None else round(me["L_in"], 2),
                     "L_box": "" if me.get("L_box") is None else round(me["L_box"], 2),
                 }
-                rows.append(row)
-                cache[key] = {"mtime": _mtime(p), "row": row}
+                rows.append(_with_label(row, t, group, label))
+                cache[key] = {"mtime": _mtime(p), "seg_size": seg_size, "row": row}
                 if i % 20 == 0:
                     _save_cache(cache)
             except Exception as e:  # noqa: BLE001
@@ -265,6 +288,8 @@ class Trainer:
                 Y.append([(l + rr) / 2, (t + b) / 2, math.log2(rr - l)])
                 G.append(r["group"])
                 GT.append((l, t, rr, b))
+            if len(X) < 50:
+                raise RuntimeError(f"有效裁切样本 {len(X)}/50 / Usable crop samples: {len(X)}/50")
             X = np.array(X); Y = np.array(Y); G = np.array(G)
             mu, sd = X.mean(0), X.std(0) + 1e-9
             mu[0], sd[0] = 0.0, 1.0
@@ -422,6 +447,14 @@ class Trainer:
 CACHE_FILE = os.path.join(OUT_ROOT, "train_cache.json")
 
 
+def _with_label(row, target, group, label):
+    return dict(row, group=group, label_path=label,
+                crop_l=target["CropLeft"], crop_t=target["CropTop"],
+                crop_r=target["CropRight"], crop_b=target["CropBottom"],
+                EV=target.get("Exposure2012", ""), T=target.get("Temperature", ""),
+                Tint=target.get("Tint", ""))
+
+
 def _mtime(p):
     try:
         return os.path.getmtime(p)
@@ -480,8 +513,8 @@ def _group_of(path: str, root: str) -> str:
         return _top_batch(path)
     head = rel.replace("/", "\\").split("\\")[0]
     if head in (".", "") or head == os.path.basename(rel):
-        return os.path.basename(os.path.normpath(root))
-    return f"{os.path.basename(os.path.normpath(root))}/{head}"
+        return _cache_key(root)
+    return _cache_key(os.path.join(root, head))
 
 
 _BURST = __import__("re").compile(r"(\d+)(?!.*\d)")

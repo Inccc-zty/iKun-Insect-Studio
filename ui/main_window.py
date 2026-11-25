@@ -54,7 +54,7 @@ TEXT = {
         "subtitle": "昆虫自动化后期",
         "mode": "模式", "precision": "精度", "device": "设备",
         "modes": ["裁切 + 曝光", "只裁切", "只曝光"],
-        "segs": ["掩膜 768", "掩膜 512"],
+        "segs": ["掩膜 768", "掩膜 512", "掩膜 384（小显存）"],
         "start": "开始处理", "pause": "暂停", "resume": "继续",
         "to_light": "浅色", "to_dark": "深色",
         "lang": "EN", "lang_tip": "切换英文",
@@ -122,6 +122,11 @@ TEXT = {
         "model_import_bad": "导入失败：{e}",
         "train_group": "从「原片 + 同名 XMP」重拟合",
         "train_ph": "选多少个目录都行，会各自递归扫描",
+        "train_pair": "添加原图与成品 JPG",
+        "train_original": "选择未裁切原图目录",
+        "train_export": "选择对应的成品 JPG 目录",
+        "train_pair_tip": "原图：{p}\n成品与原图须同名且子目录对应。仅有成品时需补原图。",
+        "train_pair_same": "请选择两个不同的原图和成品目录。",
         "train_dirs": "训练目录（可以放多个，也能直接把照片拖进来）",
         "train_added": "已加入 {n} 个目录，点「开始训练」即可",
         "train_pause": "暂停训练", "train_resume": "继续训练",
@@ -192,7 +197,7 @@ TEXT = {
         "subtitle": "Automatic Insect Post-processing",
         "mode": "Mode", "precision": "Precision", "device": "Device",
         "modes": ["Crop + Exposure", "Crop only", "Exposure only"],
-        "segs": ["Mask 768", "Mask 512"],
+        "segs": ["Mask 768", "Mask 512", "Mask 384 (low VRAM)"],
         "start": "Start", "pause": "Pause", "resume": "Resume",
         "to_light": "Light", "to_dark": "Dark",
         "lang": "中文", "lang_tip": "Switch to Chinese",
@@ -261,6 +266,11 @@ TEXT = {
         "model_import_bad": "Import failed: {e}",
         "train_group": "Refit from RAW + sidecar XMP",
         "train_ph": "Pick one or more folders; each is scanned recursively",
+        "train_pair": "Add originals and JPEG exports",
+        "train_original": "Select the uncropped originals folder",
+        "train_export": "Select the matching JPEG exports folder",
+        "train_pair_tip": "Originals: {p}\nUse matching names and subfolders. JPEG exports require their originals.",
+        "train_pair_same": "Choose separate originals and exports folders.",
         "train_dirs": "Training folders (multiple allowed — you can drop photos here)",
         "train_added": "Added {n} folder(s); press Start training",
         "train_pause": "Pause", "train_resume": "Resume",
@@ -1082,7 +1092,8 @@ class MainWindow(QMainWindow):
 
         self.cb_seg = QComboBox()
         self.cb_seg.addItems(self._t("segs"))
-        self.cb_seg.setCurrentIndex(0 if int(self.cfg.get("seg_size")) == 768 else 1)
+        _seg = int(self.cfg.get("seg_size") or 768)
+        self.cb_seg.setCurrentIndex({768: 0, 512: 1, 384: 2}.get(_seg, 0))
         self.cb_seg.currentIndexChanged.connect(self._cfg_changed)
         g2 = group(self._t("precision"), self.cb_seg)
         h.addLayout(g2)
@@ -1452,6 +1463,9 @@ class MainWindow(QMainWindow):
         self.b_add_train = _mini(QPushButton(self._t("add_train")))
         self.b_add_train.setObjectName("ghost")
         self.b_add_train.clicked.connect(self._pick_train_dir)
+        self.b_train_pair = _mini(QPushButton(self._t("train_pair")))
+        self.b_train_pair.setObjectName("ghost")
+        self.b_train_pair.clicked.connect(self._pick_train_pair)
         self.b_del_train = _mini(QPushButton(self._t("del_train")))
         self.b_del_train.setObjectName("ghost")
         self.b_del_train.clicked.connect(self._del_train_dir)
@@ -1467,7 +1481,7 @@ class MainWindow(QMainWindow):
         self.b_pause_train.clicked.connect(self._toggle_pause_train)
         self.b_pause_train.setEnabled(False)
         self.b_del_train.hide()
-        for b in (self.b_add_train, self.b_clear_train):
+        for b in (self.b_add_train, self.b_train_pair, self.b_clear_train):
             row.addWidget(b)
         row.addStretch(1)
         row.addWidget(self.b_pause_train)
@@ -1891,7 +1905,7 @@ class MainWindow(QMainWindow):
         for lay, key in self._top_groups:
             lay._label.setText(self._t(key))
 
-        for cb, key, n in ((self.cb_mode, "modes", 3), (self.cb_seg, "segs", 2),
+        for cb, key, n in ((self.cb_mode, "modes", 3), (self.cb_seg, "segs", 3),
                            (self.cb_policy, "policies", 3)):
             idx = cb.currentIndex()
             cb.blockSignals(True)
@@ -1957,6 +1971,7 @@ class MainWindow(QMainWindow):
         self.box_train.setTitle(self._t("train_group"))
         self.l_train_dirs.setText(self._t("train_dirs"))
         self.b_add_train.setText(self._t("add_train"))
+        self.b_train_pair.setText(self._t("train_pair"))
         self.b_del_train.setText(self._t("del_train"))
         self.b_clear_train.setText(self._t("clear_train"))
         self.t_go.setText(self._t("train_go"))
@@ -2419,7 +2434,7 @@ class MainWindow(QMainWindow):
 
     def _cfg_changed(self):
         mode = ["both", "crop", "exposure"][self.cb_mode.currentIndex()]
-        seg = 768 if self.cb_seg.currentIndex() == 0 else 512
+        seg = [768, 512, 384][max(0, min(2, self.cb_seg.currentIndex()))]
         dev = "cuda" if self.cb_dev.currentIndex() == 0 else "cpu"
         self.cfg.update(mode=mode, seg_size=seg, device=dev)
 
@@ -2451,7 +2466,7 @@ class MainWindow(QMainWindow):
             if isinstance(r, dict):
                 d = r.get("dir") or ""
                 out.append({"dir": d, "files": list(r.get("files") or []),
-                            "n": r.get("n")})
+                            "n": r.get("n"), "original_dir": r.get("original_dir")})
             elif isinstance(r, str) and r:
                 out.append({"dir": r, "files": [], "n": None})
         return out
@@ -2476,6 +2491,9 @@ class MainWindow(QMainWindow):
             it = QListWidgetItem()
             it.setToolTip(f"{e['dir']}\n" + (self._t("train_tip_files", n=n) if e.get("files")
                                               else self._t("train_tip_dir", n=n)))
+            if e.get("original_dir"):
+                name = f"{name} · {self._t('train_pair')}"
+                it.setToolTip(f"{e['dir']}\n" + self._t("train_pair_tip", p=e["original_dir"]))
             it.setSizeHint(QSize(120, 26))
             self.train_list.addItem(it)
             holder = QWidget()
@@ -2492,8 +2510,26 @@ class MainWindow(QMainWindow):
             btn.clicked.connect(lambda _=False, d=e["dir"]: self._remove_train_dir(d))
             hb.addWidget(btn)
             self.train_list.setItemWidget(it, holder)
-        self.cfg.update(train_dirs=[{"dir": e["dir"], "files": e.get("files") or []}
+        self.cfg.update(train_dirs=[{"dir": e["dir"], "files": e.get("files") or [],
+                                     "original_dir": e.get("original_dir")}
                                     for e in self._train_dirs])
+
+    def _pick_train_pair(self):
+        original = QFileDialog.getExistingDirectory(self, self._t("train_original"))
+        if not original:
+            return
+        export = QFileDialog.getExistingDirectory(self, self._t("train_export"))
+        if not export:
+            return
+        if os.path.samefile(original, export):
+            QMessageBox.warning(self, "", self._t("train_pair_same"))
+            return
+        export = os.path.normpath(export)
+        self._train_dirs = [e for e in self._train_dirs
+                            if os.path.normcase(e["dir"]) != os.path.normcase(export)]
+        self._train_dirs.append({"dir": export, "files": [], "n": None,
+                                 "original_dir": os.path.normpath(original)})
+        self._refresh_train_list()
 
     def _pick_train_dir(self):
         d = QFileDialog.getExistingDirectory(self, self._t("pick_train"))
@@ -2939,7 +2975,7 @@ class MainWindow(QMainWindow):
             if ts["state"] == "done" and not getattr(self, "_train_switched", False):
                 rep = ts.get("report") or {}
                 got = []
-                for kind, key in (("crop", "coef"), ("ev", "ev_coef")):
+                for kind, key in (("crop", "coef"), ("exposure", "ev_coef")):
                     path = (rep.get(kind) or {}).get("adopted")
                     if path:
                         self.cfg.update(**{key: path})
