@@ -209,7 +209,7 @@ big should it be.** That can be measured two equivalent ways, hence two entry po
 
 #### Entry 1: originals (RAW or full-frame JPG) + sidecar XMP
 
-Train tab → **Add folder**, pick the folder with the originals.
+Set **Data source** (top right of the Train tab) to **RAW / JPG with XMP**, then use the add button.
 
 The XMP states your crop box in the original's full-frame coordinates — the most direct ground truth
 there is. RAW and full-frame JPG both work: each is "the whole uncropped frame", only the file format
@@ -217,7 +217,7 @@ differs.
 
 #### Entry 2: finished JPEG exports only
 
-Train tab → **Add JPEG exports only**, pick the export folder. **No originals, no XMP.**
+Set **Data source** to **Finished JPEGs only**, then add the export folder. **No originals, no XMP.**
 
 Why it works: an export *is* the frame after cropping. Run the mask on it and three things are
 directly measurable —
@@ -244,7 +244,7 @@ No originals needed, no XMP needed — an original is just *another way to measu
 
 #### Entry 3: exports plus their uncropped originals
 
-Train tab → **Add originals and JPEG exports**; pick originals first, then exports.
+Set **Data source** to **Finished JPEGs + originals**, then add: originals first, exports second.
 
 One extra step over entry 2: feature registration confirms the pair really is the same photo and that
 the crop is axis-aligned, then the box lands in the original's coordinate system. **Unverified pairs are
@@ -253,11 +253,11 @@ the same stem are rejected outright.
 
 #### Which to use
 
-| What you have | Which entry |
+| What you have | Data source |
 |---|---|
-| RAW or full-frame JPG + sidecar XMP | Entry 1 (least work) |
-| Finished exports, no originals | Entry 2 |
-| Exports plus uncropped originals | Entry 3 (labels in original coordinates, most robust) |
+| RAW or full-frame JPG + sidecar XMP | RAW / JPG with XMP (least work) |
+| Finished exports, no originals | Finished JPEGs only |
+| Exports plus uncropped originals | Finished JPEGs + originals (labels in original coordinates) |
 
 All three need **at least 50 photos**. The output is a coefficient file; once adopted it can be switched
 in the app.
