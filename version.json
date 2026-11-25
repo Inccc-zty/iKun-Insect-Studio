@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "date": "2026-11-24",
-  "notes": "首个发布版本：裁切 + 曝光 + 锐化，写 .xmp；训练页支持按文件夹挑图训练。",
-  "url": "https://github.com/Inccc-zty/iKun-Insect-Studio/releases/tag/v1.0.0"
+  "version": "1.0.1",
+  "date": "2026-11-25",
+  "notes": "掩膜新增 384 档（小显存可用）；训练可暂停、可只训拖进来的几张、提取结果缓存复用；重置保留训练模型；深色模式白缝修复；图标透明底。",
+  "url": "https://github.com/Inccc-zty/iKun-Insect-Studio/releases/tag/v1.0.1"
 }
