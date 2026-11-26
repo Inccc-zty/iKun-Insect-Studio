@@ -241,6 +241,36 @@ switchable in the app.
 The first seven sections argue *why*; this one states *what is actually computed*, so another machine can
 reproduce it. **No dataset provenance, no sample list, no weights.**
 
+### 8.0 Mask, body box and subject count (what happens before the thirteen features)
+
+**① Whole frame into the network**: the RAW's embedded full-frame JPEG (or any bitmap) is resized straight
+to `size×size` (768 / 512 / 384) — **no crop, no aspect correction**; coordinates are normalised anyway,
+so a squashed input costs nothing. BiRefNet runs **one fp32 forward pass** and returns a probability map.
+
+**② Binarise and clean**: `m >= 128` (probability 0.5) gives the binary mask; keep the largest component;
+merge back fragments whose centre lies within `2r+1` of the main blob (antennae, severed leg roots).
+
+**③ Body vs limbs**: `r = round(0.035 · √area)`, then a **morphological opening** with an elliptical kernel
+of radius `r`:
+
+```
+core = open(m, ellipse(2r+1))        # semantics: "regions at least 2r thick" = the body
+```
+
+The radius scales with √area, so it holds from springtails to dragonflies; a fixed pixel radius always
+fails at one end. If the opening is empty, fall back to `r/2`, then to `1`. The `core` bounding box is the
+body box; `full` is the bounding box of the whole mask.
+
+> Why not morphological reconstruction: it pulls every leg attached to the body into `core` — exactly the
+> wrong direction.
+
+**④ Multiple subjects**: count components (besides the largest) with area > **8%** of the main blob.
+When more than one subject is present (mating pairs, two side by side), `head` is forced to `None`, the
+four head terms in §8.1 become zero, and a box is still produced.
+
+**⑤ Normalise**: every box and point is divided by frame width/height, giving `core`, `full`, `head` in
+0–1 — the inputs of the table in §8.1.
+
 ### 8.1 The thirteen inputs
 
 The mask yields two boxes (`core` = body, `full` = with limbs); the head model yields one point. All are
@@ -294,15 +324,51 @@ Step 3 translates only, never resizes — resizing would undo step 2.
 Sharpening is a lookup by aperture, strictly increasing 20 → 65, no interpolation or extrapolation.
 White balance is the constant 5333 / +16 (see section 4).
 
-### 8.5 Head network
+### 8.5 The head network, layer by layer
 
-ResNet50 (ImageNet weights): stem+layer1+layer2, then layer3(/16) and layer4(/32) fused to 256 channels,
-a 3×3 head emitting a **64×64 heatmap**, softmax + soft-argmax for (u,v), mapped back to the full frame.
-30 ms per photo on a GTX 1650 at fp32.
+**Where the input comes from**: the body box `core` is expanded by **15%** on each side (`pad=0.15`,
+relative to core's own width/height, clipped at the frame), cropped from the **preview-resolution**
+image, resized bilinearly to **256×256**, divided by 255, then normalised with ImageNet mean
+`(0.485, 0.456, 0.406)` / std `(0.229, 0.224, 0.225)`.
 
-Same dataset, same loss: 4-layer CNN from scratch 5%, from scratch + soft-target CE 22%, ImageNet
-pretraining + soft-target CE **90%**. Trained from scratch, all five folds converge to the same loss
-(3.79–3.81) — it learns a position prior, not the image.
+**Backbone and fusion** (ResNet50, ImageNet `IMAGENET1K_V2` weights):
+
+| Stage | Structure | Output |
+|---|---|---|
+| stem | conv1 7×7/2 + bn + relu + maxpool 3×3/2 + layer1(3 blocks) + layer2(4 blocks) | 512 ch @ /8 |
+| layer3 | 6 blocks | 1024 ch @ /16 |
+| layer4 | 3 blocks | 2048 ch @ /32 |
+| p3 | 1×1 conv | 256 ch @ /16 |
+| p4 | 1×1 conv 2048→256, bilinear upsample ×2 | 256 ch @ /16 |
+| fuse | **p3 + p4 (sum, not concatenation)** | 256 ch @ /16 |
+| upsample | bilinear to 64×64 | 256 ch @ 64² |
+| head | 3×3 256→128 + BN + LeakyReLU(0.1); 3×3 128→64 + BN + LeakyReLU(0.1); 1×1 64→1 | **1 ch @ 64² (logits)** |
+
+**From heatmap to a coordinate** (one softmax over all 4096 cells, not per-cell sigmoid):
+
+```
+p  = softmax(logits.reshape(1, 4096)).reshape(1, 64, 64)
+u  = Σ p · (i + 0.5) / 64        # horizontal expectation, sub-cell precision
+v  = Σ p · (i + 0.5) / 64        # vertical
+x  = l + u · (r − l)             # back to full-frame normalised coords
+y  = t + v · (b − t)
+conf = p.max()                   # only a very low gate (default 0.05) for fully diffuse maps
+```
+
+Expectation rather than argmax because the peak is genuinely flat (measured conf 0.034–0.064, median
+0.056): argmax jumps within a cell, the expectation is far steadier. Health check is `pred_std` —
+0.24–0.27 normally, ≈0 when the model has collapsed.
+
+**Training**: 256×256 chips, ImageNet initialisation, **40 epochs**, soft-target cross-entropy over a
+Gaussian heatmap. Same dataset and loss: 4-layer CNN from scratch **5%**, from scratch with soft-target
+CE **22%**, ImageNet init with soft-target CE **90%**. From scratch, all five folds converge to the same
+loss (3.79–3.81) — it learns a position prior, not the image.
+
+> The training script was not shipped with the weights; the checkpoint records only `epochs=40`, `size`
+> and `pad`. Optimiser, learning rate and augmentation belonged to that training run and are not
+> invented here.
+
+Inference cost: 30 ms per photo (GTX 1650, fp32).
 
 ### 8.6 What the tiers cost
 
