@@ -211,7 +211,7 @@ python reports/figs_table_eda.py    # 21b, 23-25
 
 Every figure is recomputed from CSV by these scripts; no hand-typed numbers.
 
-## 6 Training (optional): refit the crop model on your own exports
+## 7 Training (optional): refit the crop model on your own exports
 
 The built-in 105 terms were fitted on one fixed set of photos. When your subject matter differs a lot,
 you can refit on **your own finished JPEGs**; the result sits alongside the built-in model and can be
