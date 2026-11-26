@@ -13,7 +13,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14          # Apple Silicon（arm64）。torch 已不再为 Intel macOS 出轮子
+    runs-on: macos-15          # Apple Silicon（arm64）。torch 已不再为 Intel macOS 出轮子
     timeout-minutes: 90
     permissions:
       contents: write          # 上传 Release 资产需要
@@ -57,7 +57,7 @@ jobs:
 
       - name: Upload to Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "iKun Insect Studio ${TAG#v}" --notes "macOS build"
