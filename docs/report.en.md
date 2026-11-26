@@ -235,3 +235,82 @@ aspect 1.25, offset (+2%, +3%)), train on exports only, invert on 60 unseen fram
 The other path is originals plus same-name XMP: the crop box comes straight from the sidecar, so labels
 live in the original's coordinates. Both need at least 50 photos; the output is one coefficient file,
 switchable in the app.
+
+## 8 Implementation details (enough to rebuild it)
+
+The first seven sections argue *why*; this one states *what is actually computed*, so another machine can
+reproduce it. **No dataset provenance, no sample list, no weights.**
+
+### 8.1 The thirteen inputs
+
+The mask yields two boxes (`core` = body, `full` = with limbs); the head model yields one point. All are
+normalised to the full frame (0–1).
+
+| # | Symbol | Definition |
+|---|---|---|
+| 1 | `log2 D` | `D = full box area / core box area`, floored at 1.0; longer legs → larger D |
+| 2 | `cw` | core box width |
+| 3 | `ch` | core box height |
+| 4 | `fr−fl` | full box width |
+| 5 | `fb−ft` | full box height |
+| 6 | `ccx−0.5` | body centre, horizontal offset from frame centre |
+| 7 | `ccy−0.5` | the same, vertical |
+| 8 | `(fcx−ccx)/cw` | full box offset from body box, in body widths |
+| 9 | `(fcy−ccy)/ch` | the same, vertically |
+| 10 | `hx` | `(head_x−ccx)/cw` |
+| 11 | `hy` | `(head_y−ccy)/ch` |
+| 12 | `hx·(ccx−0.5)` | head × body offset, horizontal interaction |
+| 13 | `hy·(ccy−0.5)` | the same, vertical |
+
+With a second subject (another blob >8% of the main one) or no head point, terms 10–13 are set to zero —
+a "headless" variant that still produces a box.
+
+### 8.2 From thirteen numbers to 105 terms
+
+`[1] + 13 terms + every pairwise product (squares included)` = 1 + 13 + 13·14/2 = **105**. Ridge with
+λ = 0.03 on standardised features; **the intercept column is not penalised** (`mu=0, sd=1`). Three targets:
+
+    cx, cy ∈ (0,1)        log2(box width) ∈ ℝ
+
+Hold-out is **5-fold by batch** — one shoot or one folder never spans folds. Random splits let near-duplicate
+frames leak into validation and inflate the score.
+
+### 8.3 Constraint order (do not reorder)
+
+```
+1. contain the full box: w = max(w, full width + 2·pad, full height + 2·pad), pad = 0.03
+2. cannot fit the canvas (w > 1): w = 1, flag canvas_limited
+3. clamp the centre into the no-leg-cut region, then into [0,1]
+```
+
+Step 1 is hard: a larger box beats a clipped leg. Step 2 only fires when the subject fills the frame.
+Step 3 translates only, never resizes — resizing would undo step 2.
+
+### 8.4 Exposure and sharpening
+
+    EV = 3.0416 − 0.02108·L_in − 0.01362·L_box
+
+`L_in` is the p95 luminance inside the mask, `L_box` the p95 between box and mask, both sRGB 0–255.
+Sharpening is a lookup by aperture, strictly increasing 20 → 65, no interpolation or extrapolation.
+White balance is the constant 5333 / +16 (see section 4).
+
+### 8.5 Head network
+
+ResNet50 (ImageNet weights): stem+layer1+layer2, then layer3(/16) and layer4(/32) fused to 256 channels,
+a 3×3 head emitting a **64×64 heatmap**, softmax + soft-argmax for (u,v), mapped back to the full frame.
+30 ms per photo on a GTX 1650 at fp32.
+
+Same dataset, same loss: 4-layer CNN from scratch 5%, from scratch + soft-target CE 22%, ImageNet
+pretraining + soft-target CE **90%**. Trained from scratch, all five folds converge to the same loss
+(3.79–3.81) — it learns a position prior, not the image.
+
+### 8.6 What the tiers cost
+
+| Tier | Peak VRAM | Per photo | Mask agreement with 768 |
+|---|---:|---:|---:|
+| 768 | ≈2.3 GB | 0.77 s | — |
+| 512 | ≈1.5 GB | 0.50 s | 0.962 |
+| 384 | ≈0.9 GB | 0.39 s | 0.928 |
+
+The gap lives at the edges of small insects (<10% of frame width); larger subjects are indistinguishable.
+**Picking a tier above free VRAM does not error — it pages through system memory: 0.77 s → 3.19 s measured.**
