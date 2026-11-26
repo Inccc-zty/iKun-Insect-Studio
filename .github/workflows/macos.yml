@@ -43,12 +43,21 @@ jobs:
         run: python build_mac.py
 
       - name: Selftest inside the frozen app
-        env:
-          HF_HOME: ${{ github.workspace }}/build_mac_assets/hf
+        # 故意不带 HF_HOME：就是要证明模型是从 .app 里读的，不是从构建机的缓存目录读的
         run: |
           APP="dist_mac/iKunInsectStudio.app/Contents/MacOS/iKunInsectStudio"
-          ls -la dist_mac/iKunInsectStudio.app/Contents/MacOS | head
-          "$APP" --selftest
+          echo "== bundle contents =="
+          find dist_mac/iKunInsectStudio.app -maxdepth 4 -type d \( -name hf -o -name weights -o -name data \) | head
+          du -sh dist_mac/iKunInsectStudio.app/Contents/Frameworks/hf 2>/dev/null || true
+          du -sh dist_mac/iKunInsectStudio.app/Contents/Frameworks/skill 2>/dev/null || true
+          ls -la dist_mac/iKunInsectStudio.app/Contents/Frameworks/hf/hub 2>/dev/null || true
+          ls -la dist_mac/iKunInsectStudio.app/Contents/Frameworks/skill/assets/weights 2>/dev/null || true
+          ls -la dist_mac/iKunInsectStudio.app/Contents/Frameworks/skill/assets/data 2>/dev/null || true
+          echo "== selftest with no HF_HOME =="
+          env -u HF_HOME "$APP" --selftest
+          echo "== selftest again, cache removed from the runner =="
+          rm -rf build_mac_assets/hf
+          env -u HF_HOME "$APP" --selftest
 
       - name: Report size
         run: du -sh dist_mac/*.zip dist_mac/iKunInsectStudio.app
