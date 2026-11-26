@@ -31,7 +31,7 @@ jobs:
           python -m pip install \
             torch torchvision \
             PySide6 pillow numpy opencv-python-headless rawpy \
-            transformers huggingface_hub timm einops safetensors scipy \
+            transformers huggingface_hub timm einops kornia safetensors scipy \
             pyinstaller
       - name: Show versions
         run: |
