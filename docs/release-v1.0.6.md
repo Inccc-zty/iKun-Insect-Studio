@@ -15,11 +15,21 @@
 
 ## 这个版本更新了什么（1.0.6）
 
-**Windows 版：三个分卷 + `join-parts.bat`，合并后解压即可。**
+| 平台 | 文件 | 大小 | 说明 |
+|---|---|---:|---|
+| Windows | `iKunInsectStudio_v1.0.6.zip.001` / `.002` / `.003` + `join-parts.bat` | 3.38 GB | 合并后解压 |
+| **macOS** | `iKunInsectStudio_macOS_arm64.zip` | **0.78 GB** | Apple 芯片（M1 及以后），解压得到 `.app` |
 
-**macOS 版：代码已改造完成，但这一版还没出包。** 构建要在 GitHub 的 macOS 机器上跑，
-而当前仓库的 Actions 每次启动几秒内就被取消（连只打印一行的空白任务也一样），属于账号侧的问题，
-不是工作流写错。等 Actions 恢复，跑一次 `macOS build` 就能把 `…_macOS_arm64.zip` 挂上来。
+**Mac 版怎么装**：解压 → 把 `iKunInsectStudio.app` 拖进「应用程序」→ 首次打开若提示"无法验证开发者"，
+右键点图标选「打开」，或执行一次：
+
+```
+xattr -dr com.apple.quarantine /Applications/iKunInsectStudio.app
+```
+
+包没有苹果签名，这一步只清掉 Gatekeeper 的隔离标记。**Intel Mac 跑不了**——PyTorch 已不再发布
+Intel macOS 的二进制。Mac 版在 CI 里跑过自检（加载 BiRefNet、前向、解框全过），但这台机器没有
+Apple 芯片，实际速度要你那边测：M1/M2 走 MPS，8 GB 内存建议精度选 512。
 
 **更重要的一个修复：包里现在自带模型了**
 
@@ -91,12 +101,22 @@ A day out shooting means one record frame per individual, and only a handful wor
 
 ## What changed in 1.0.6
 
-**Windows: three parts plus `join-parts.bat`; merge, then unzip.**
+| Platform | File | Size | Notes |
+|---|---|---:|---|
+| Windows | `iKunInsectStudio_v1.0.6.zip.001` / `.002` / `.003` + `join-parts.bat` | 3.38 GB | merge, then unzip |
+| **macOS** | `iKunInsectStudio_macOS_arm64.zip` | **0.78 GB** | Apple Silicon (M1+), unzip to get the `.app` |
 
-**macOS: the code is ported, but this release does not ship a bundle.** The build has to run on a GitHub
-macOS runner, and every run in this repository is cancelled within seconds right now — including a blank job
-that only echoes one line — so it is an account-side problem, not a bad workflow. Once Actions works, one run
-of `macOS build` attaches `…_macOS_arm64.zip`.
+**Installing on macOS**: unzip, drag `iKunInsectStudio.app` into Applications. If macOS complains about an
+unverified developer, right-click the icon and choose Open, or run once:
+
+```
+xattr -dr com.apple.quarantine /Applications/iKunInsectStudio.app
+```
+
+The bundle is unsigned; that only clears Gatekeeper's quarantine flag. **Intel Macs are not supported** —
+PyTorch no longer publishes Intel macOS binaries. The app passed its selftest inside CI (BiRefNet loaded, one
+forward pass, coefficients resolved), but this runner has no Apple silicon, so real speed is yours to measure:
+M1/M2 use MPS, and an 8 GB machine should pick tier 512.
 
 **What had to change for cross-platform**
 
