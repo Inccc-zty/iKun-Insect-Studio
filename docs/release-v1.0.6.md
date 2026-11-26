@@ -18,7 +18,7 @@
 | 平台 | 文件 | 大小 | 说明 |
 |---|---|---:|---|
 | Windows | `iKunInsectStudio_v1.0.6.zip.001` / `.002` / `.003` + `join-parts.bat` | 3.38 GB | 合并后解压 |
-| **macOS** | `iKunInsectStudio_macOS_arm64.zip` | **0.78 GB** | Apple 芯片（M1 及以后），解压得到 `.app` |
+| **macOS** | `iKunInsectStudio_macOS_arm64.zip` | **0.78 GB** | Apple 芯片（M1 及以后），解压得到 `.app`；**模型在包里，离线可用** |
 
 **Mac 版怎么装**：解压 → 把 `iKunInsectStudio.app` 拖进「应用程序」→ 首次打开若提示"无法验证开发者"，
 右键点图标选「打开」，或执行一次：
@@ -26,6 +26,10 @@
 ```
 xattr -dr com.apple.quarantine /Applications/iKunInsectStudio.app
 ```
+
+包体 0.78 GB 的原因：macOS 的 PyTorch 不带 CUDA（Windows 那 3.4 GB 里大半是 CUDA 运行库），
+不是缺东西。包内 `Contents/Resources/hf` 是 BiRefNet（848 MB）、`Contents/Resources/skill/assets/weights`
+是头部权重（95 MB），CI 里删掉构建机缓存后再跑一次自检仍然通过，证明模型确实在包里。
 
 包没有苹果签名，这一步只清掉 Gatekeeper 的隔离标记。**Intel Mac 跑不了**——PyTorch 已不再发布
 Intel macOS 的二进制。Mac 版在 CI 里跑过自检（加载 BiRefNet、前向、解框全过），但这台机器没有
@@ -104,7 +108,7 @@ A day out shooting means one record frame per individual, and only a handful wor
 | Platform | File | Size | Notes |
 |---|---|---:|---|
 | Windows | `iKunInsectStudio_v1.0.6.zip.001` / `.002` / `.003` + `join-parts.bat` | 3.38 GB | merge, then unzip |
-| **macOS** | `iKunInsectStudio_macOS_arm64.zip` | **0.78 GB** | Apple Silicon (M1+), unzip to get the `.app` |
+| **macOS** | `iKunInsectStudio_macOS_arm64.zip` | **0.78 GB** | Apple Silicon (M1+), unzip to get the `.app`; **model bundled, works offline** |
 
 **Installing on macOS**: unzip, drag `iKunInsectStudio.app` into Applications. If macOS complains about an
 unverified developer, right-click the icon and choose Open, or run once:
@@ -112,6 +116,10 @@ unverified developer, right-click the icon and choose Open, or run once:
 ```
 xattr -dr com.apple.quarantine /Applications/iKunInsectStudio.app
 ```
+
+Why 0.78 GB: PyTorch on macOS ships no CUDA (most of Windows' 3.4 GB is CUDA runtime libraries), so nothing
+is missing. `Contents/Resources/hf` holds BiRefNet (848 MB) and `Contents/Resources/skill/assets/weights` the
+head weights (95 MB); CI deletes the build machine's cache and runs the selftest again, which still passes.
 
 The bundle is unsigned; that only clears Gatekeeper's quarantine flag. **Intel Macs are not supported** —
 PyTorch no longer publishes Intel macOS binaries. The app passed its selftest inside CI (BiRefNet loaded, one
