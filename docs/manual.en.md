@@ -110,22 +110,43 @@ The app only puts the crop and the exposure on the sliders.
 > **GPU**: NVIDIA, 4 GB of VRAM and up. See the table below — running out of VRAM does not crash
 > anything, the app falls back to 384 px and keeps going, with slightly softer masks for small insects.
 
-### GPU requirements (measured)
+### GPU and mask tiers (measured)
 
-| Tier | Hardware | Reality |
-|---|---|---|
-| **Recommended** | NVIDIA with 6 GB+ (RTX 2060 / 3060 and up) | 768 px runs comfortably, 1–2 s per photo |
-| **Usable** | NVIDIA 4 GB (GTX 1650, RTX 3050 laptop) | 512 is safe; 768 depends on desktop usage — the app drops to 512 or 384 when it gets tight |
-| **Marginal** | NVIDIA 2 GB | Switch the mask to **384** manually and it runs steadily; masks are softer and small insects (under 10% of frame width) crop slightly off |
-| **No GPU / AMD / Intel** | Falls back to CPU | **145 s per photo** (measured) — about 4 hours for 100 frames. It works, but not for batches |
+**Choose by *free* VRAM, not total.** The desktop takes its share first (Edge, Explorer, chat apps —
+typically 1.2–2 GB); only what is left is usable.
 
-Requires a CUDA 11.8 capable card (Maxwell sm_50 and newer, i.e. GTX 10 series onward); older cards
-fall back to CPU.
+| Tier | Peak VRAM | Needs free VRAM | Per photo | Suits |
+|---|---:|---:|---:|---|
+| **384** | ≈0.9 GB | ≥1.2 GB | 0.39 s | 2 GB cards; or a 4 GB card with a browser running |
+| **512** | ≈1.5 GB | ≥1.8 GB | 0.50 s | 4 GB cards (GTX 1650 / RTX 3050 laptop) → **the pick** |
+| **768** | ≈2.3 GB | ≥2.6 GB | 0.77 s | 6 GB and up |
+| **1024** | ≈3.5 GB | ≥4.0 GB | — | 12 GB and up; a 4 GB card goes OOM |
 
-Measured on one frame: 768 → 0.77 s, 512 → 0.50 s, 384 → 0.39 s; mask agreement with 768 is 0.962 and 0.928.
+> **Picking a tier that does not fit does not raise an error — it just gets very slow.**
+>
+> When VRAM runs out, Windows silently moves the overflow to system memory and shuttles it back and
+> forth (WDDM paging). Task Manager shows only 30–50% GPU use, but each photo goes from 0.8 s to over
+> 3 s and the fan never stops. Measured on one photo with identical code: **0.77 s** at 768 with VRAM
+> free, **3.19 s** once the desktop held 2 GB.
+>
+> **How to tell you are in that hole**: Task Manager → Performance → GPU → "Dedicated GPU memory" is
+> near full, or `data/perf.log` shows wildly varying totals. Drop one tier and the speed returns.
+>
+> The classic trigger: a 4 GB card with a dozen browser tabs open, still set to 768.
 
-When VRAM runs out: the app calls `torch.cuda.empty_cache()`, re-runs at half resolution (768→384) and
-flags the result as `degraded`, including a note in `params.csv`. It never returns a silently wrong box.
+Other hardware notes:
+
+| Case | Behaviour |
+|---|---|
+| No GPU / AMD / Intel | falls back to CPU: **145 s per photo**, ~4 h for 100. Works, not for batches |
+| CUDA support | needs CUDA 11.8 (Maxwell sm_50 and newer, i.e. GTX 10 series up); older cards fall back to CPU |
+
+Mask quality: 512 agrees with 768 at **0.962**, 384 at **0.928**. The difference lives at the edges of
+small insects (<10% of frame width); larger subjects look the same in all three tiers.
+
+Automatic behaviour when VRAM is short: `torch.cuda.empty_cache()`, then retry at 768→512→384, marking
+the result `degraded` and noting it in `params.csv`. It never silently returns a wrong box — but the
+retry itself costs time, so picking the right tier up front is cheaper.
 
 ---
 
