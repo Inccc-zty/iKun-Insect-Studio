@@ -39,21 +39,19 @@ jobs:
 
       - name: Build .app
         env:
-          HF_HOME: ${{ github.workspace }}/insect-studio/build_mac_assets/hf
-        run: |
-          cd insect-studio
-          python build_mac.py
+          HF_HOME: ${{ github.workspace }}/build_mac_assets/hf
+        run: python build_mac.py
 
       - name: Selftest inside the frozen app
         env:
-          HF_HOME: ${{ github.workspace }}/insect-studio/build_mac_assets/hf
+          HF_HOME: ${{ github.workspace }}/build_mac_assets/hf
         run: |
-          APP="insect-studio/dist_mac/iKunInsectStudio.app/Contents/MacOS/iKunInsectStudio"
-          ls -la "insect-studio/dist_mac/iKunInsectStudio.app/Contents/MacOS" | head
+          APP="dist_mac/iKunInsectStudio.app/Contents/MacOS/iKunInsectStudio"
+          ls -la dist_mac/iKunInsectStudio.app/Contents/MacOS | head
           "$APP" --selftest
 
       - name: Report size
-        run: du -sh insect-studio/dist_mac/*.zip insect-studio/dist_mac/iKunInsectStudio.app
+        run: du -sh dist_mac/*.zip dist_mac/iKunInsectStudio.app
 
       - name: Upload to Release
         env:
@@ -61,11 +59,11 @@ jobs:
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "iKun Insect Studio ${TAG#v}" --notes "macOS build"
-          gh release upload "$TAG" insect-studio/dist_mac/iKunInsectStudio_macOS_arm64.zip --clobber
+          gh release upload "$TAG" dist_mac/iKunInsectStudio_macOS_arm64.zip --clobber
 
       - name: Keep the app as a workflow artifact too
         uses: actions/upload-artifact@v4
         with:
           name: iKunInsectStudio-macOS-arm64
-          path: insect-studio/dist_mac/iKunInsectStudio_macOS_arm64.zip
+          path: dist_mac/iKunInsectStudio_macOS_arm64.zip
           retention-days: 7
