@@ -65,7 +65,23 @@ def build(stage: str, hf_dir: str) -> str:
             "--windowed", "--name", APP_NAME,
             "--osx-bundle-identifier", "com.ikun.insectstudio",
             "--distpath", DIST, "--workpath", BUILD, "--specpath", BUILD,
-            "--add-data", f"{os.path.join(stage, 'skill')}:skill"]
+            "--add-data", f"{os.path.join(stage, 'skill')}:skill",
+            # torchvision 的 C++ 扩展（nms 等）不会被默认 hook 收全，必须显式抓
+            "--collect-all", "torchvision",
+            "--collect-binaries", "torch",
+            "--collect-submodules", "torch",
+            "--collect-data", "torch",
+            "--hidden-import", "torchvision.ops",
+            "--hidden-import", "kornia",
+            "--collect-all", "kornia",
+            "--hidden-import", "timm",
+            "--hidden-import", "einops",
+            "--hidden-import", "transformers",
+            "--hidden-import", "rawpy",
+            "--collect-submodules", "rawpy",
+            "--exclude-module", "matplotlib",
+            "--exclude-module", "tkinter",
+            "--exclude-module", "pandas"]
     if os.path.isdir(hf_dir) and os.listdir(hf_dir):
         args += ["--add-data", f"{hf_dir}:hf"]
     args.append(os.path.join(HERE, "run.py"))
