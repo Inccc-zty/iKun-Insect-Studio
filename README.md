@@ -48,6 +48,21 @@ This app does those two jobs and writes the result as a sidecar `.xmp` your edit
 
 Models preload in the background for ~10–20 s; you can queue photos meanwhile.
 
+> ### Pick the mask tier by *free* VRAM, or it will crawl
+>
+> The desktop takes 1.2–2 GB of VRAM before the app gets any. Choosing a tier that does not fit does
+> **not** raise an error — Windows silently pages it through system memory and each photo goes from
+> 0.8 s to over 3 s, with the fan pinned.
+>
+> | Free VRAM | Tier | Per photo |
+> |---|---|---|
+> | ≥ 2.6 GB | **768** | 0.77 s |
+> | ≥ 1.8 GB | **512** ← 4 GB cards (GTX 1650 / RTX 3050 laptop) | 0.50 s |
+> | ≥ 1.2 GB | **384** | 0.39 s |
+>
+> Check Task Manager → Performance → GPU → *Dedicated GPU memory*: if it sits near full, drop one tier.
+> Details in the [manual](docs/manual.en.md#gpu-and-mask-tiers-measured).
+
 ## How it works, in one paragraph
 
 Each photo is segmented **once** at 768² with BiRefNet. The mask gives two boxes (body via

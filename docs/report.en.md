@@ -210,3 +210,28 @@ python reports/figs_table_eda.py    # 21b, 23-25
 ```
 
 Every figure is recomputed from CSV by these scripts; no hand-typed numbers.
+
+## 6 Training (optional): refit the crop model on your own exports
+
+The built-in 105 terms were fitted on one fixed set of photos. When your subject matter differs a lot,
+you can refit on **your own finished JPEGs**; the result sits alongside the built-in model and can be
+switched at any time.
+
+An export *is* the frame after cropping, so one mask pass over it yields three scale-free facts: how much
+of the frame the insect takes (`1/body width`, `1/body height`), how far its centre sits from the frame
+centre (`ox`, `oy`), and shape descriptors (dispersion, aspect ratio, limb share, head direction). The
+model learns «shape → how many times larger, offset by how much», and inference inverts it:
+
+    W = body width · 2^t0        centre = body centre − (ox·W, oy·H)
+
+So **no originals and no XMP are needed** — an original is just another way to measure, not a premise.
+Features must be expressed in units of frame width (divide y by that frame's own aspect), otherwise the
+same insect reads as two different body types in a 3:2 and a 1:1 export.
+
+Closed-form check: generate 240 exports from a known rule (width = body width × (4 + 0.6·limb ratio),
+aspect 1.25, offset (+2%, +3%)), train on exports only, invert on 60 unseen frames — **median IoU
+0.9997**. On 60 real exports the in-sample MAE was t0 0.011 / t1 0.011 / ox 0.012 / oy 0.007.
+
+The other path is originals plus same-name XMP: the crop box comes straight from the sidecar, so labels
+live in the original's coordinates. Both need at least 50 photos; the output is one coefficient file,
+switchable in the app.
