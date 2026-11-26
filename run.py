@@ -21,20 +21,44 @@ if not getattr(sys, "frozen", False):
 def _setup_hf_home():
     """模型缓存位置，按平台定。
 
-    1. 环境变量 HF_HOME / INSECT_HF 优先（CI、排障用）
-    2. 包里带了 hf/（打包时预下载）就用包内的，离线可用
-    3. 否则放 data/hf，第一次运行联网下载一次
+    顺序：环境变量 → 包里带的 hf/ → 旧缓存路径 → 可写目录 data/hf（首次联网下载）。
+
+    macOS 的坑：PyInstaller 把 `--add-data` 放进了 `.app/Contents/Resources/`，
+    而可执行文件在 `.app/Contents/MacOS/`，两者不同级；只查 `root/hf` 会找不到，
+    于是静默退回联网下载——在连不上 HuggingFace 的机器上就是每张失败。
     """
     if os.environ.get("HF_HOME"):
         return os.environ["HF_HOME"]
-    root = (os.path.dirname(sys.executable) if getattr(sys, "frozen", False)
-            else os.path.dirname(os.path.abspath(__file__)))
-    for cand in (os.path.join(root, "_internal", "hf"), os.path.join(root, "hf")):
-        if os.path.isdir(cand):
+
+    frozen = bool(getattr(sys, "frozen", False))
+    root = os.path.dirname(sys.executable) if frozen else os.path.dirname(os.path.abspath(__file__))
+    meipass = getattr(sys, "_MEIPASS", "")
+    cands = [
+        os.path.join(root, "_internal", "hf"),          # Windows onedir
+        os.path.join(root, "hf"),
+        os.path.join(root, os.pardir, "Resources", "hf"),   # macOS .app
+        os.path.join(root, os.pardir, "Frameworks", "hf"),
+        os.path.join(meipass, "hf") if meipass else "",
+    ]
+    for cand in cands:
+        if cand and os.path.isdir(os.path.join(cand, "hub")):
+            cand = os.path.normpath(cand)
             os.environ["HF_HOME"] = cand
             os.environ.setdefault("HF_HUB_OFFLINE", "1")
             return cand
-    d = os.path.join(root, "data", "hf")
+
+    legacy = "D:/反渲染的研究/.cache/hf"               # 老版本的写死路径，能读就继续用
+    if os.path.isdir(os.path.join(legacy, "hub")):
+        os.environ["HF_HOME"] = legacy
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        return legacy
+
+    # 可写目录：macOS 不能写进 .app（会破坏签名，升级时整包被替换）
+    if frozen and sys.platform == "darwin":
+        base = os.path.expanduser("~/Library/Application Support/iKunInsectStudio")
+    else:
+        base = root
+    d = os.path.join(base, "data", "hf")
     os.makedirs(d, exist_ok=True)
     os.environ["HF_HOME"] = d
     return d

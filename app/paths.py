@@ -58,7 +58,10 @@ def skill_dir() -> str:
     """算法包：打包后在 exe 同级 skill/，开发时用环境变量或工作区。"""
     if is_frozen():
         base = bundle_root()
+        up = os.path.dirname(base)                      # macOS: Contents/MacOS → Contents
         for cand in (os.path.join(base, "skill"),
+                     os.path.join(up, "Resources", "skill"),   # macOS .app
+                     os.path.join(up, "Frameworks", "skill"),
                      os.path.join(getattr(sys, "_MEIPASS", base), "skill"),
                      os.path.join(base, "_internal", "skill")):
             if os.path.isdir(cand):
