@@ -11,13 +11,14 @@ __pycache__/
 
 # app runtime state (never commit)
 app/data/
-data/
+/data/
 *.log
 crash.log
 
 # model weights & large binaries → Release assets, not git
 skill/assets/weights/*.pth
 *.pth
+!skill/assets/weights/*.pth
 *.onnx
 
 # OS / editor

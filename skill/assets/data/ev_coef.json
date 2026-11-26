@@ -1,0 +1,22 @@
+{
+ "version": "final-20261116",
+ "source_chat": "昆虫AI自动曝光调节方案回顾（044cf7e8）",
+ "formula": "EV = b0 + b1*L_in + b2*L_box",
+ "b0": 3.04161069,
+ "b1": -0.02107819,
+ "b2": -0.01361516,
+ "L_in": "掩膜内（腐蚀边缘后）亮度 L* 的 p95",
+ "L_box": "全身外接矩形内、掩膜之外的亮度 L* 的 p95",
+ "clip": [-2.0, 2.5],
+ "saturation_warn": 96.0,
+ "n": 4396,
+ "batches": 11,
+ "r2_in": 0.6274,
+ "mae_in": 0.2717,
+ "r2_holdout": 0.5997,
+ "mae_holdout": 0.2924,
+ "mae_const": 0.4147,
+ "ev_median": 0.33,
+ "ev_std": 0.572,
+ "note": "b0 只在「NEF 内嵌 JPEG（dcraw/机身渲染）」这一套坐标里有意义；换渲染器要重标截距，斜率不变。"
+}
