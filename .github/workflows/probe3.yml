@@ -1,9 +1,0 @@
-name: probe3
-on:
-  workflow_dispatch:
-jobs:
-  m:
-    runs-on: macos-15
-    steps:
-      - name: echo
-        run: uname -m && sw_vers
