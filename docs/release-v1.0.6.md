@@ -69,7 +69,7 @@
 **精度按可用显存选**：4 GB 卡选 **512**，6 GB 以上选 768。选高于可用显存的档不会报错，
 但会走系统分页，从 0.8 秒掉到 3 秒以上。
 
-**百度网盘**（提取码 8848）：https://pan.baidu.com/s/1l1-JLttPB9EuO1Mz6AbbIw?pwd=8848
+**百度网盘**（提取码 8848）：https://pan.baidu.com/s/1Y8DXyby6ZurjYscQKorsCw?pwd=8848
 
 ---
 ---
@@ -124,4 +124,4 @@ On an 8 GB machine pick tier 512.
 **Pick the mask tier by free VRAM**: 512 on 4 GB cards, 768 on 6 GB and up. A tier above free VRAM does not
 error — it pages through system memory and drops from 0.8 s to over 3 s.
 
-**Baidu Netdisk** (code 8848): https://pan.baidu.com/s/1l1-JLttPB9EuO1Mz6AbbIw?pwd=8848
+**Baidu Netdisk** (code 8848): https://pan.baidu.com/s/1Y8DXyby6ZurjYscQKorsCw?pwd=8848

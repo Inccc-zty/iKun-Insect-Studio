@@ -38,7 +38,7 @@
 
 Windows 10/11 + NVIDIA 显卡（4 GB 显存起；2 GB 可用 384 档）。
 
-**百度网盘**（提取码 8848）：https://pan.baidu.com/s/1l1-JLttPB9EuO1Mz6AbbIw?pwd=8848
+**百度网盘**（提取码 8848）：https://pan.baidu.com/s/1Y8DXyby6ZurjYscQKorsCw?pwd=8848
 
 ---
 ---
@@ -83,4 +83,4 @@ Upgrading: replace `exe` and `_internal\` only, **keep `data\`** (your trained m
 
 Windows 10/11 with an NVIDIA GPU (4 GB VRAM; 2 GB works at 384).
 
-**Baidu Netdisk** (code 8848): https://pan.baidu.com/s/1l1-JLttPB9EuO1Mz6AbbIw?pwd=8848
+**Baidu Netdisk** (code 8848): https://pan.baidu.com/s/1Y8DXyby6ZurjYscQKorsCw?pwd=8848

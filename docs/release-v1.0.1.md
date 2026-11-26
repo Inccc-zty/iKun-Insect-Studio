@@ -31,7 +31,7 @@
 
 需要 Windows 10/11 + NVIDIA 显卡（4 GB 显存起，2 GB 可跑 384 档）。
 
-下载优先用上面的 GitHub 分卷。**只有 GitHub 慢、或者下到一半断了，再用百度网盘**（提取码 8848）：https://pan.baidu.com/s/1l1-JLttPB9EuO1Mz6AbbIw?pwd=8848
+下载优先用上面的 GitHub 分卷。**只有 GitHub 慢、或者下到一半断了，再用百度网盘**（提取码 8848）：https://pan.baidu.com/s/1Y8DXyby6ZurjYscQKorsCw?pwd=8848
 
 ---
 
@@ -68,4 +68,4 @@
 
 Windows 10/11 with an NVIDIA GPU (4 GB VRAM; 2 GB works at 384).
 
-Prefer the GitHub parts above. **Use the Baidu Netdisk mirror only when GitHub is slow or the transfer keeps dropping** (code 8848): https://pan.baidu.com/s/1l1-JLttPB9EuO1Mz6AbbIw?pwd=8848
+Prefer the GitHub parts above. **Use the Baidu Netdisk mirror only when GitHub is slow or the transfer keeps dropping** (code 8848): https://pan.baidu.com/s/1Y8DXyby6ZurjYscQKorsCw?pwd=8848
