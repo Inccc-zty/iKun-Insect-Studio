@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
 
 from app.paths import app_root, asset_path
 from app.engine import crop_v3, CACHE_DIR, PREVIEW_DIR
+from app import sysenv
 from app import models, rawio, sheet
 import head_fix          # engine 已把 skill/scripts 加进 sys.path
 
@@ -2777,7 +2778,7 @@ class MainWindow(QMainWindow):
 
     def _open_models_dir(self):
         d = os.path.dirname(models.store_dir("crop"))
-        os.startfile(d)                      # noqa: S606
+        sysenv.open_path(d)
 
     # ---------------------------------------------------------------- 头部修正
     def _refresh_head(self):
@@ -2868,13 +2869,13 @@ class MainWindow(QMainWindow):
     def _open_output_dir(self):
         d = getattr(self, "_last_export", "")
         if d and os.path.exists(d):
-            os.startfile(os.path.dirname(d))     # noqa: S606
+            sysenv.open_path(os.path.dirname(d))
             return
         items = self.engine.sheet_items()
         if items:
-            os.startfile(os.path.dirname(items[0]["path"]))   # noqa: S606
+            sysenv.open_path(os.path.dirname(items[0]["path"]))
         else:
-            os.startfile(app_root())                            # noqa: S606
+            sysenv.open_path(app_root())
 
     # ---------------------------------------------------------------- 刷新
     def _refresh_grid(self):

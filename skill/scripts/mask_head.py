@@ -226,7 +226,8 @@ def analyze(prev: Image.Image, dev: str = "cuda", size: int = 768, want_head: bo
             raise
         try:
             import torch
-            torch.cuda.empty_cache()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
         except Exception:  # noqa: BLE001
             pass
         used = max(384, size // 2)
@@ -253,7 +254,8 @@ def analyze(prev: Image.Image, dev: str = "cuda", size: int = 768, want_head: bo
                 raise
             try:
                 import torch
-                torch.cuda.empty_cache()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
             except Exception:  # noqa: BLE001
                 pass
             head, conf = None, 0.0

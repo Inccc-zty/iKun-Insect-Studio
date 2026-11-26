@@ -1,0 +1,71 @@
+name: macOS build
+
+# 在 GitHub 的 macOS 机器上打包 .app，产物直接挂到 Release。
+# 触发：Actions 页面点 Run workflow，或推送 tag v*。
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "挂到哪个 Release（例如 v1.0.6）"
+        required: true
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: macos-14          # Apple Silicon（arm64）。torch 已不再为 Intel macOS 出轮子
+    timeout-minutes: 90
+    permissions:
+      contents: write          # 上传 Release 资产需要
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            torch torchvision \
+            PySide6 pillow numpy opencv-python-headless rawpy \
+            transformers huggingface_hub timm einops safetensors scipy \
+            pyinstaller
+      - name: Show versions
+        run: |
+          python -c "import torch, torchvision, PySide6, cv2, rawpy; print('torch', torch.__version__); print('mps', torch.backends.mps.is_available())"
+
+      - name: Build .app
+        env:
+          HF_HOME: ${{ github.workspace }}/insect-studio/build_mac_assets/hf
+        run: |
+          cd insect-studio
+          python build_mac.py
+
+      - name: Selftest inside the frozen app
+        env:
+          HF_HOME: ${{ github.workspace }}/insect-studio/build_mac_assets/hf
+        run: |
+          APP="insect-studio/dist_mac/iKunInsectStudio.app/Contents/MacOS/iKunInsectStudio"
+          ls -la "insect-studio/dist_mac/iKunInsectStudio.app/Contents/MacOS" | head
+          "$APP" --selftest
+
+      - name: Report size
+        run: du -sh insect-studio/dist_mac/*.zip insect-studio/dist_mac/iKunInsectStudio.app
+
+      - name: Upload to Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "iKun Insect Studio ${TAG#v}" --notes "macOS build"
+          gh release upload "$TAG" insect-studio/dist_mac/iKunInsectStudio_macOS_arm64.zip --clobber
+
+      - name: Keep the app as a workflow artifact too
+        uses: actions/upload-artifact@v4
+        with:
+          name: iKunInsectStudio-macOS-arm64
+          path: insect-studio/dist_mac/iKunInsectStudio_macOS_arm64.zip
+          retention-days: 7

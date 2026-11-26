@@ -1,6 +1,6 @@
 {
-  "version": "1.0.5",
-  "date": "2026-11-25",
-  "notes": "训练数据来源只留两项，默认「成品 JPG」：成片直接反解裁切框，不需要原图与 XMP；下拉框箭头与其它两处统一。",
-  "url": "https://github.com/Inccc-zty/iKun-Insect-Studio/releases/tag/v1.0.5"
+  "version": "1.0.6",
+  "date": "2026-11-26",
+  "notes": "新增 macOS（Apple Silicon）版本；设备自动按 cuda → mps → cpu 选择；模型缓存路径改为跨平台。",
+  "url": "https://github.com/Inccc-zty/iKun-Insect-Studio/releases/tag/v1.0.6"
 }

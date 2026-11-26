@@ -333,15 +333,9 @@ class Engine:
 
     # ---------------------------------------------------------------- 模型预热
     def pick_device(self):
-        dev = self.cfg.get("device")
-        if dev == "cuda":
-            try:
-                import torch
-                if not torch.cuda.is_available():
-                    dev = "cpu"
-            except Exception:  # noqa: BLE001
-                dev = "cpu"
-        return dev
+        """cuda → mps（Apple 芯片）→ cpu，用户显式选过也只在可用时采用。"""
+        from . import sysenv
+        return sysenv.pick_device(self.cfg.get("device") or "auto")
 
     def warmup(self, dev=None, block=True):
         """加载掩膜 + 头部模型。第一次要 30–40 秒（冷盘），之后同进程内是 0。

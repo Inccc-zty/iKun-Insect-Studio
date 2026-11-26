@@ -14,12 +14,33 @@ import os
 import sys
 import time
 
+HERE = os.path.dirname(os.path.abspath(__file__))
 if not getattr(sys, "frozen", False):
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, HERE)
 
-# 模型缓存（与 skill 一致）
-os.environ.setdefault("HF_HOME", "D:/反渲染的研究/.cache/hf")
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
+def _setup_hf_home():
+    """模型缓存位置，按平台定。
+
+    1. 环境变量 HF_HOME / INSECT_HF 优先（CI、排障用）
+    2. 包里带了 hf/（打包时预下载）就用包内的，离线可用
+    3. 否则放 data/hf，第一次运行联网下载一次
+    """
+    if os.environ.get("HF_HOME"):
+        return os.environ["HF_HOME"]
+    root = (os.path.dirname(sys.executable) if getattr(sys, "frozen", False)
+            else os.path.dirname(os.path.abspath(__file__)))
+    for cand in (os.path.join(root, "_internal", "hf"), os.path.join(root, "hf")):
+        if os.path.isdir(cand):
+            os.environ["HF_HOME"] = cand
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
+            return cand
+    d = os.path.join(root, "data", "hf")
+    os.makedirs(d, exist_ok=True)
+    os.environ["HF_HOME"] = d
+    return d
+
+
+HF_HOME = _setup_hf_home()
 
 
 def _adapt_vram(cfg):
@@ -40,15 +61,58 @@ def _adapt_vram(cfg):
         pass
 
 
+
+def _selftest() -> int:
+    """无界面自检：只验证「模型能加载 + 前向能跑 + 系数能解框」。
+    CI（macOS runner 没有 GPU）跑这个，代替人工点一遍。"""
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    import numpy as np
+    from PIL import Image
+
+    sys.path.insert(0, os.path.join(HERE, "skill", "scripts"))
+    from app.config import Config
+    from app import crop_rel                  # noqa: F401  只验证可导入
+    import crop_v3
+    import mask_head
+
+    dev = "cpu"
+    print(f"[selftest] python={sys.version.split()[0]} platform={sys.platform} HF_HOME={HF_HOME}")
+    cfg = Config()
+    cfg._d.update(device="cpu", seg_size=384)
+    print("[selftest] config ok")
+
+    img = Image.fromarray(
+        (np.random.default_rng(0).random((480, 640, 3)) * 255).astype("uint8"))
+    res = mask_head.analyze(img, dev=dev, size=384, want_head=True)
+    print(f"[selftest] mask ok={res.get('ok')} size={res.get('size')} "
+          f"reason={res.get('reason', '')}")
+    if not res.get("ok"):
+        # 纯噪声图上掩膜为空是正常的；把「能跑完前向」当作通过，用合成框继续验系数
+        if res.get("reason") != "mask_empty":
+            return 2
+        print("[selftest] 噪声图掩膜为空，属预期；改用合成框验证系数")
+        res = {"core": (0.40, 0.40, 0.60, 0.55), "full": (0.36, 0.37, 0.64, 0.60), "head": (0.50, 0.42)}
+
+    J = crop_v3.load()
+    cr = crop_v3.compute_crop(res["core"], res["full"], res.get("head"),
+                              multi=False, J=J)
+    print(f"[selftest] crop={tuple(round(v, 4) for v in cr['crop'])} w={cr['w']:.4f}")
+    print("[selftest] OK")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-api", action="store_true")
+    ap.add_argument("--selftest", action="store_true", help="无界面自检后退出")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--reset-all", action="store_true",
                     help="连 models/ 一起清空（默认重置会保留你训练/导入的模型）")
     ap.add_argument("--reset", action="store_true",
                     help="先把 data/ 清空到出厂状态再启动（测试用）")
     a = ap.parse_args()
+    if a.selftest:
+        return _selftest()
 
     try:
         from PySide6.QtWidgets import QApplication
