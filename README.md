@@ -40,7 +40,9 @@ This app does those two jobs and writes the result as a sidecar `.xmp` your edit
 
 ## Quick start (Windows)
 
-1. Download the latest release and extract all parts into one folder.
+1. Download the release: `…zip.001`, `.002`, `.003` and `join-parts.bat` into **one folder**, run the
+   bat to merge them into a single zip, then unzip. The BiRefNet model is **inside the package** — no
+   download, no GPU toolkit needed beyond the CUDA build that ships with torch.
 2. Double-click `iKunInsectStudio.exe` (keep the whole folder together).
 3. Drop a folder or a batch of RAWs, pick a mode, press **Start**.
    Then **import into your editor** — the `.xmp` is read on import. If the batch is already in
