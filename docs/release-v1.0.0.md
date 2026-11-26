@@ -12,7 +12,7 @@
 
 需要 Windows 10/11 + NVIDIA 显卡（4 GB 显存起）。首次启动预读模型约 10–20 秒。
 
-下载优先用上面的 GitHub 分卷。**只有 GitHub 慢、或者下到一半断了，再用百度网盘**（提取码 8848）：https://pan.baidu.com/s/1dkWKy9bxWnTreHFD5cCBVA?pwd=8848
+下载优先用上面的 GitHub 分卷。**只有 GitHub 慢、或者下到一半断了，再用百度网盘**（提取码 8848）：https://pan.baidu.com/s/1l1-JLttPB9EuO1Mz6AbbIw?pwd=8848
 
 ---
 
@@ -30,4 +30,4 @@ A day out shooting means one record frame per individual. In macro work the inse
 
 Windows 10/11 with an NVIDIA GPU (4 GB VRAM and up). Models preload for ~10–20 s on first launch.
 
-Prefer the GitHub parts above. **Use the Baidu Netdisk mirror only when GitHub is slow or the transfer keeps dropping** (code 8848): https://pan.baidu.com/s/1dkWKy9bxWnTreHFD5cCBVA?pwd=8848
+Prefer the GitHub parts above. **Use the Baidu Netdisk mirror only when GitHub is slow or the transfer keeps dropping** (code 8848): https://pan.baidu.com/s/1l1-JLttPB9EuO1Mz6AbbIw?pwd=8848

@@ -14,7 +14,7 @@
 拖入文件夹 → 逐张出掩膜、框、头点 → 结束时在每张 RAW 旁边写一个 `.xmp`。全程不用点第二次。
 
 **下载**：优先用 **[GitHub Releases](https://github.com/Inccc-zty/iKun-Insect-Studio/releases)**（两个分卷 + `join-parts.bat`，约 2.6 GB）。
-GitHub 下不动或中途断流，再用 [百度网盘](https://pan.baidu.com/s/1dkWKy9bxWnTreHFD5cCBVA?pwd=8848)（提取码 **8848**）的整包。
+GitHub 下不动或中途断流，再用 [百度网盘](https://pan.baidu.com/s/1l1-JLttPB9EuO1Mz6AbbIw?pwd=8848)（提取码 **8848**）的整包。
 
 两个分卷放同一个文件夹，双击 `join-parts.bat` 合成一个 zip，解压得到 `iKunInsectStudio` 文件夹，
 双击里面的 `iKunInsectStudio.exe` 即可 —— **整个文件夹要一起留着**，不能只拷 exe。
