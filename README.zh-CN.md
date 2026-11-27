@@ -1,6 +1,6 @@
 # iKun Insect Studio · 昆虫自动化后期
 
-**[下载](https://github.com/Inccc-zty/iKun-Insect-Studio/releases)** — Windows 三个分卷 / **macOS arm64** 整包（GitHub 优先） · **[网盘备用](https://pan.baidu.com/s/1Y8DXyby6ZurjYscQKorsCw?pwd=8848)**（提取码 8848） ·
+**[下载](https://github.com/Inccc-zty/iKun-Insect-Studio/releases)** — Windows 三个分卷 / **macOS arm64** 整包（GitHub 优先） · **[网盘备用](https://pan.baidu.com/s/1Y8DXyby6ZurjYscQKorsCw?pwd=8848)**（提取码 8848，[macOS 包](https://pan.baidu.com/s/1orsQ9RngYvnAi8pLO7Qb_w?pwd=8848)） ·
 **[使用说明](docs/manual.md)** · **[技术报告](docs/report.md)** · [English](README.md)
 
 ![iKun Insect Studio 中文界面，一批照片刚跑完](docs/media/hero.zh.png)

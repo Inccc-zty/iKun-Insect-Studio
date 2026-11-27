@@ -1,6 +1,6 @@
 # iKun Insect Studio
 
-**[Download](https://github.com/Inccc-zty/iKun-Insect-Studio/releases)** — Windows (3 parts) and **macOS arm64** (GitHub first) · **[Netdisk mirror](https://pan.baidu.com/s/1Y8DXyby6ZurjYscQKorsCw?pwd=8848)** (code 8848) ·
+**[Download](https://github.com/Inccc-zty/iKun-Insect-Studio/releases)** — Windows (3 parts) and **macOS arm64** (GitHub first) · **[Netdisk mirror](https://pan.baidu.com/s/1Y8DXyby6ZurjYscQKorsCw?pwd=8848)** (code 8848; [macOS bundle](https://pan.baidu.com/s/1orsQ9RngYvnAi8pLO7Qb_w?pwd=8848)) ·
 **[Manual](docs/manual.en.md)** · **[Technical report](docs/report.en.md)** · [中文](README.zh-CN.md)
 
 ![iKun Insect Studio, English interface, a batch just finished](docs/media/hero.en.png)
