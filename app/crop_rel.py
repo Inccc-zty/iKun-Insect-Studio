@@ -118,7 +118,7 @@ def fit(rows, lam=0.03):
             "note": "由成片相对空间拟合；推理时按 W=cw·2^t0 反解裁切框"}
 
 
-def compute_crop(core, full, head=None, multi=False, J=None, aspect=1.0):
+def compute_crop(core, full, head=None, multi=False, J=None, aspect=1.0, ratio=0.0):
     """把相对系数还原成裁切框，并沿用「不出界 → 腿留白 3% → 贴合」的约束顺序。"""
     c = J or {}
     f, _u = features(core, full, head, multi, aspect=aspect)
@@ -135,6 +135,20 @@ def compute_crop(core, full, head=None, multi=False, J=None, aspect=1.0):
     t0, t1 = min(t0, 3.5), min(t1, 3.5)          # 最多放大 11 倍，防止外推出天际
     W = min(cw * (2 ** t0), 1.0)
     H = min(ch * (2 ** t1), 1.0)
+    if ratio and ratio > 0:
+        # 固定像素比例：由宽度推出高度，并保证「装下全身框」——不然瘦高个会切腿
+        pad = 0.03
+        need_w = min(1.0, max(full[2] - full[0], 0.0) + 2 * pad)
+        need_h = min(1.0, max(full[3] - full[1], 0.0) + 2 * pad)
+        H = W * aspect / ratio
+        if H < need_h or W < need_w:
+            H = max(H, need_h, need_w * aspect / ratio)
+            W = H * ratio / aspect
+            if W > 1.0 or H > 1.0:              # 画布装不下就整体缩，比例不破
+                k = min(1.0 / W, 1.0 / H)
+                W, H = W * k, H * k
+        H = min(H, 1.0)
+        W = min(W, 1.0)
     cx = ccx - ox * W      # ox = 虫心在成片中的偏移；反解时符号相反
     cy = ccy - oy * H
     box = [cx - W / 2, cy - H / 2, cx + W / 2, cy + H / 2]

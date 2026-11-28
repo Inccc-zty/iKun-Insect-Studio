@@ -332,6 +332,22 @@ class Engine:
         self.running = False
 
     # ---------------------------------------------------------------- 模型预热
+    def crop_ratio(self) -> float:
+        """目标像素宽高比（宽/高）；0 = 跟随原片比例。"""
+        v = str(self.cfg.get("crop_ratio") or "source").strip()
+        table = {"1:1": 1.0, "4:5": 4 / 5, "3:2": 3 / 2, "16:9": 16 / 9}
+        if v in table:
+            return table[v]
+        if v == "custom":
+            txt = str(self.cfg.get("crop_ratio_custom") or "").replace("：", ":")
+            try:
+                a, b = txt.split(":")
+                r = float(a) / float(b)
+                return r if 0.2 <= r <= 5 else 0.0
+            except Exception:               # noqa: BLE001
+                return 0.0
+        return 0.0
+
     def pick_device(self):
         """cuda → mps（Apple 芯片）→ cpu，用户显式选过也只在可用时采用。"""
         from . import sysenv
@@ -583,10 +599,13 @@ class Engine:
                 from . import crop_rel
                 _w, _h = prev.size
                 cr = crop_rel.compute_crop(core, full, head, multi=(nsub > 1), J=J,
-                                           aspect=_w / max(_h, 1))
+                                           aspect=_w / max(_h, 1), ratio=self.crop_ratio())
                 out["crop_space"] = "crop_relative"
             else:
-                cr = crop_v3.compute_crop(core, full, head, multi=(nsub > 1), J=J)
+                _w, _h = prev.size
+                cr = crop_v3.compute_crop(core, full, head, multi=(nsub > 1), J=J,
+                                          ratio=self.crop_ratio(),
+                                          aspect=_w / max(_h, 1))
             out.update(crop=[round(v, 5) for v in cr["crop"]], w=round(cr["w"], 4),
                        cx=round(cr["cx"], 4), cy=round(cr["cy"], 4),
                        canvas_limited=bool(cr["canvas_limited"]),

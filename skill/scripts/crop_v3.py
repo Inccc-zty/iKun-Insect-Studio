@@ -81,7 +81,10 @@ def design(f):
     return np.asarray(v, float)
 
 
-def compute_crop(core, full, head=None, multi: bool = False, J: dict = None):
+def compute_crop(core, full, head=None, multi: bool = False, J: dict = None,
+                 ratio: float = 0.0, aspect: float = 0.0):
+    """ratio：目标像素宽高比（宽/高）。0 表示「跟随原片比例」，即老行为。
+    aspect：画幅自身宽高比（像素），用于把归一化的 dy 换算成目标比例下的高度。"""
     c = J or load()
     f, (ccx, ccy, fcx, fcy, cw, ch, head_used) = features(core, full, head, multi)
     x = design(f)
@@ -96,12 +99,36 @@ def compute_crop(core, full, head=None, multi: bool = False, J: dict = None):
     # ② 腿留白：框必须装下「全身框 + 每边 pad」
     need_l, need_t = full[0] - pad, full[1] - pad
     need_r, need_b = full[2] + pad, full[3] + pad
-    need = max(need_r - need_l, need_b - need_t)
-    w = max(w, need, 0.05)
+    need_w = need_r - need_l
+    need_h = need_b - need_t
+
+    # 高度：默认（ratio=0 或画幅未知）与宽相等，即「归一化方形 = 原片比例」
+    src_aspect = aspect if aspect and aspect > 0 else 1.0
+    r = ratio if ratio and ratio > 0 else 0.0
+
+    # 固定比例时，宽高互相牵制：必须同时满足「装下全身框」的两个方向，
+    # 否则选 16:9 遇到瘦高个会把腿切掉（旧实现只给宽加了 need）。
+    if r <= 0:
+        w = h = max(w, need_w, need_h, 0.05)
+    else:
+        k = r / src_aspect                      # w = h * k
+        h = max(need_h, need_w / k, w / k, 0.05)   # 同时满足两条腿留白与模型预测的宽
+        w = h * k
+
     limited = False
-    if w > 1.0:                      # ① 画布装不下 → 吃满，标记
-        w = 1.0
+    ratio_cut = False
+    ratio_relaxed = False
+    if w > 1.0 or h > 1.0:           # ① 画布装不下 → 按比例缩到画布内，标记
+        f = min(1.0 / w, 1.0 / h)
+        w, h = w * f, h * f
         limited = True
+        ratio_cut = (h + 1e-9 < need_h) or (w + 1e-9 < need_w)
+    if ratio_cut:
+        # 比例和「不切腿」冲突时，不切腿优先：放弃精确比例，放到能装下为止
+        w = min(1.0, max(w, need_w))
+        h = min(1.0, max(h, need_h))
+        ratio_relaxed = True
+        ratio_cut = (h + 1e-9 < need_h) or (w + 1e-9 < need_w)
 
     # 框心先夹进「不能切腿」的可行域
     x0, x1 = cx - w / 2, cx + w / 2
@@ -109,20 +136,20 @@ def compute_crop(core, full, head=None, multi: bool = False, J: dict = None):
         x0, x1 = need_l, need_l + w
     if x1 < need_r:
         x0, x1 = need_r - w, need_r
-    y0, y1 = cy - w / 2, cy + w / 2
+    y0, y1 = cy - h / 2, cy + h / 2
     if y0 > need_t:
-        y0, y1 = need_t, need_t + w
+        y0, y1 = need_t, need_t + h
     if y1 < need_b:
-        y0, y1 = need_b - w, need_b
+        y0, y1 = need_b - h, need_b
 
     # 再夹进画布
     if x0 < 0 or y0 < 0 or x1 > 1 or y1 > 1:
         limited = True
         x0 = min(max(x0, 0.0), max(0.0, 1.0 - w))
-        y0 = min(max(y0, 0.0), max(0.0, 1.0 - w))
-        x1, y1 = x0 + w, y0 + w
+        y0 = min(max(y0, 0.0), max(0.0, 1.0 - h))
+        x1, y1 = x0 + w, y0 + h
 
-    return {"crop": (x0, y0, x1, y1), "w": w,
+    return {"crop": (x0, y0, x1, y1), "w": w, "h": h, "ratio_cut": ratio_cut, "ratio_relaxed": ratio_relaxed,
             "cx": (x0 + x1) / 2, "cy": (y0 + y1) / 2,
             "canvas_limited": bool(limited), "pad_used": pad,
             "head_used": bool(head_used), "multi": bool(multi) or head is None}

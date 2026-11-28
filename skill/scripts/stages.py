@@ -71,7 +71,8 @@ def stage_mask(args):
     dev = args.device
     if dev == "cuda":
         import torch
-        dev = "cuda" if torch.cuda.is_available() else "cpu"
+        dev = ("cuda" if torch.cuda.is_available()
+               else "mps" if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available() else "cpu")
 
     files = list_raws(args.dir, args.limit)
     print(f"[mask] {args.dir}\n       {len(files)} 张  设备 {dev}  掩膜 {args.seg_size}px  → {cache}")

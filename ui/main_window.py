@@ -26,6 +26,7 @@ from PySide6.QtCore import (Qt, QTimer, Signal, QRect, QRectF, QPointF, QSize, Q
 from PySide6.QtGui import (QPixmap, QFont, QColor, QImage, QIcon, QPainter,
                            QPen, QRegion)
 from PySide6.QtWidgets import (
+    QInputDialog,
     QSizePolicy, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QComboBox, QListWidget, QListWidgetItem, QProgressBar, QSplitter,
     QTabWidget, QLineEdit, QFileDialog, QMessageBox, QGroupBox, QGridLayout, QScrollArea,
@@ -123,6 +124,11 @@ TEXT = {
         "model_import_bad": "导入失败：{e}",
         "train_group": "从「原片 + 同名 XMP」重拟合",
         "train_ph": "选多少个目录都行，会各自递归扫描",
+        "ratio": "裁切比例",
+        "ratios": ["原图比例", "1:1", "4:5", "3:2", "16:9", "自定义"],
+        "ratio_tip": "裁切框的像素宽高比。原图比例 = 老行为（3:2 进 3:2 出）。自定义格式：宽:高，例如 5:4",
+        "ratio_custom": "输入比例（宽:高）",
+        "ratio_bad": "比例格式不对，请写成 宽:高，例如 5:4 或 1.25:1",
         "train_src": "数据来源",
         "train_tag_xmp": "XMP",
         "train_tag_crop": "成片",
@@ -272,6 +278,11 @@ TEXT = {
         "model_import_bad": "Import failed: {e}",
         "train_group": "Refit from RAW + sidecar XMP",
         "train_ph": "Pick one or more folders; each is scanned recursively",
+        "ratio": "Aspect",
+        "ratios": ["Source", "1:1", "4:5", "3:2", "16:9", "Custom"],
+        "ratio_tip": "Pixel aspect ratio of the crop box. Source = previous behaviour (3:2 in, 3:2 out). Custom: W:H, e.g. 5:4",
+        "ratio_custom": "Enter ratio (W:H)",
+        "ratio_bad": "Use W:H, for example 5:4 or 1.25:1",
         "train_src": "Data source",
         "train_tag_xmp": "XMP",
         "train_tag_crop": "exports",
@@ -1109,6 +1120,16 @@ class MainWindow(QMainWindow):
         g2 = group(self._t("precision"), self.cb_seg)
         h.addLayout(g2)
 
+        self.cb_ratio = ArrowCombo()
+        self.cb_ratio.addItems(self._t("ratios"))
+        _rk = ["source", "1:1", "4:5", "3:2", "16:9", "custom"]
+        _cur = str(self.cfg.get("crop_ratio") or "source")
+        self.cb_ratio.setCurrentIndex(_rk.index(_cur) if _cur in _rk else 0)
+        self.cb_ratio.setToolTip(self._t("ratio_tip"))
+        self.cb_ratio.currentIndexChanged.connect(self._ratio_changed)
+        g_r = group(self._t("ratio"), self.cb_ratio)
+        h.addLayout(g_r)
+
         self.cb_dev = QComboBox()
         self.cb_dev.addItems(["CUDA", "CPU"])
         self.cb_dev.setCurrentIndex(0 if self.cfg.get("device") == "cuda" else 1)
@@ -1119,7 +1140,8 @@ class MainWindow(QMainWindow):
         self.cb_mode.setMinimumWidth(132)
         self.cb_seg.setMinimumWidth(100)
         self.cb_dev.setMinimumWidth(88)
-        self._top_groups = [(g1, "mode"), (g2, "precision"), (g3, "device")]
+        self.cb_ratio.setMinimumWidth(104)
+        self._top_groups = [(g1, "mode"), (g2, "precision"), (g_r, "ratio"), (g3, "device")]
 
         h.addStretch(1)
         self.b_lang = _mini(QPushButton(self._t("lang")), 12)
@@ -1937,6 +1959,14 @@ class MainWindow(QMainWindow):
             cb.setCurrentIndex(min(idx, n - 1))
             cb.blockSignals(False)
 
+        _idx = self.cb_ratio.currentIndex()
+        self.cb_ratio.blockSignals(True)
+        self.cb_ratio.clear()
+        self.cb_ratio.addItems(self._t("ratios"))
+        self.cb_ratio.setCurrentIndex(min(_idx, self.cb_ratio.count() - 1))
+        self.cb_ratio.setToolTip(self._t("ratio_tip"))
+        self.cb_ratio.blockSignals(False)
+
         self.b_lang.setText(self._t("lang"))
         self.b_lang.setToolTip(self._t("lang_tip"))
         _fit_width(self.b_lang)                 # 中文/英文都重新量宽度
@@ -2461,6 +2491,32 @@ class MainWindow(QMainWindow):
         if on:
             self._preview_pin = None      # 恢复跟随：不再定格在手动点的那张
             self._last_preview = None
+
+    def _ratio_changed(self):
+        keys = ["source", "1:1", "4:5", "3:2", "16:9", "custom"]
+        v = keys[max(0, min(5, self.cb_ratio.currentIndex()))]
+        if v == "custom":
+            txt, ok = QInputDialog.getText(self, self._t("ratio"),
+                                           self._t("ratio_custom"),
+                                           text=str(self.cfg.get("crop_ratio_custom") or "5:4"))
+            good = False
+            if ok and txt.strip():
+                a, _, b = txt.replace("：", ":").partition(":")
+                try:
+                    r = float(a) / float(b)
+                    good = 0.2 <= r <= 5.0
+                except Exception:              # noqa: BLE001
+                    good = False
+            if not good:
+                if ok and txt.strip():
+                    QMessageBox.warning(self, "", self._t("ratio_bad"))
+                cur = str(self.cfg.get("crop_ratio") or "source")
+                self.cb_ratio.blockSignals(True)
+                self.cb_ratio.setCurrentIndex(keys.index(cur) if cur in keys else 0)
+                self.cb_ratio.blockSignals(False)
+                return
+            self.cfg.update(crop_ratio_custom=txt.strip())
+        self.cfg.update(crop_ratio=v)
 
     def _cfg_changed(self):
         mode = ["both", "crop", "exposure"][self.cb_mode.currentIndex()]

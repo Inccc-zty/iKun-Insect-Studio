@@ -11,6 +11,8 @@ CFG = os.path.join(ROOT, "data", "config.json")
 
 DEFAULTS = {
     "mode": "both",           # both | crop | exposure
+    "crop_ratio": "source",   # source | 1:1 | 4:5 | 3:2 | 16:9 | custom
+    "crop_ratio_custom": "",
     "seg_size": 768,          # 512 省显存
     "device": "cuda",         # cuda | cpu
     "coef": "",               # 裁切系数：空 = 内置 105 项；否则填 data/models/crop/*.json

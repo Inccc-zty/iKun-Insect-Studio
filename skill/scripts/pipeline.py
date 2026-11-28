@@ -183,7 +183,8 @@ def main():
     dev = args.device
     if dev == "cuda":
         import torch
-        dev = "cuda" if torch.cuda.is_available() else "cpu"
+        dev = ("cuda" if torch.cuda.is_available()
+               else "mps" if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available() else "cpu")
 
     args.out_dir = args.out or os.path.dirname(os.path.abspath(args.dir))
     os.makedirs(args.out_dir, exist_ok=True)
