@@ -692,7 +692,8 @@ class Engine:
         if not (os.path.exists(jf) and os.path.exists(pf)):
             return None
         try:
-            meta = json.load(open(jf, encoding="utf-8"))
+            with open(jf, encoding="utf-8") as f:
+                meta = json.load(f)
             mask = cv2.imdecode(np.fromfile(pf, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
             if mask is None:
                 return None
@@ -719,11 +720,12 @@ class Engine:
             meta["full"] = [float(v) for v in meta.get("full", [])]
             if meta.get("head") is not None:
                 meta["head"] = [float(v) for v in meta["head"]]
-            json.dump(meta, open(os.path.join(ANALYSIS_DIR, key + ".json"), "w",
-                                 encoding="utf-8"), ensure_ascii=False)
+            with open(os.path.join(ANALYSIS_DIR, key + ".json"), "w", encoding="utf-8") as fh:
+                json.dump(meta, fh, ensure_ascii=False)
             ok, buf = cv2.imencode(".png", mask)
             if ok:
                 buf.tofile(os.path.join(ANALYSIS_DIR, key + ".png"))
+            _prune_dir(ANALYSIS_DIR, keep=4000)
         except Exception:      # noqa: BLE001
             pass
 
@@ -1012,6 +1014,29 @@ class Engine:
     def all_results(self):
         with self.lock:
             return [dict(t.result) for t in self.tasks if t.result]
+
+
+def _prune_dir(d: str, keep: int = 4000, every: int = 100) -> None:
+    """目录里按修改时间只留最新 keep 个文件；每 every 次调用才真的扫一遍。"""
+    global _prune_tick
+    _prune_tick += 1
+    if _prune_tick % every:
+        return
+    try:
+        files = [os.path.join(d, f) for f in os.listdir(d)]
+        if len(files) <= keep:
+            return
+        files.sort(key=lambda p: os.path.getmtime(p))
+        for f in files[:len(files) - keep]:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+    except OSError:
+        pass
+
+
+_prune_tick = 0
 
 
 def _perf_log(path, total, preview):

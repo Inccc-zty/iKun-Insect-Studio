@@ -157,6 +157,10 @@ class Trainer:
                 raise RuntimeError("已停止")
             root, selected = ent["dir"], ent["files"]
             files = selected or rawio.scan_image_dir(root, self.cfg.get("recursive"))
+            RAW_EXT = (".nef", ".arw", ".cr2", ".cr3", ".dng", ".raf", ".orf", ".rw2", ".pef", ".srw")
+            # 同一张照片的 RAW 与 JPEG 各带一份 XMP 时，只算一个样本（RAW 优先），
+            # 否则训练集会被同一张照片重复计入，留出指标虚高。
+            files = sorted(files, key=lambda x: (0 if os.path.splitext(x)[1].lower() in RAW_EXT else 1, x))
             for path in files:
                 while self._pause and not self._stop:
                     time.sleep(0.2)
@@ -172,7 +176,7 @@ class Trainer:
                 left, top, right, bottom = coords
                 if right - left <= 0.01 or bottom - top <= 0.01:
                     continue
-                key = _cache_key(source)
+                key = _cache_key(os.path.splitext(source)[0].lower())
                 if key in seen:
                     continue
                 seen.add(key)

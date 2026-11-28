@@ -65,7 +65,8 @@ class Config:
     def load(self):
         if os.path.exists(self.path):
             try:
-                d = json.load(open(self.path, encoding="utf-8"))
+                with open(self.path, encoding="utf-8") as f:
+                    d = json.load(f)
                 self._loaded = d
                 self._d.update({k: v for k, v in d.items() if k in DEFAULTS})
             except Exception:  # noqa: BLE001
@@ -73,8 +74,11 @@ class Config:
         return self._d
 
     def save(self):
-        json.dump(self._d, open(self.path, "w", encoding="utf-8"),
-                  ensure_ascii=False, indent=1)
+        """原子写：先写 .tmp 再替换，避免断电留半个配置。"""
+        tmp = self.path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(self._d, f, ensure_ascii=False, indent=1)
+        os.replace(tmp, self.path)
 
     def get(self, k, default=None):
         return self._d.get(k, DEFAULTS.get(k, default))

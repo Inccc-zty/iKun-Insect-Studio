@@ -36,7 +36,8 @@ def store_dir(kind: str) -> str:
 
 
 def _peek(path: str, kind: str):
-    d = json.load(open(path, encoding="utf-8"))
+    with open(path, encoding="utf-8") as f:
+        d = json.load(f)
     if kind == "crop" and d.get("space") == "crop_relative":
         need = ("coef_t0", "coef_t1", "coef_ox", "coef_oy", "mu", "sd")
         for k in need:
