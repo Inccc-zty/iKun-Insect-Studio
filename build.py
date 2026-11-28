@@ -198,11 +198,12 @@ def main():
         shutil.rmtree(runtime, ignore_errors=True)
         print(f"[clean] 已移除运行期 data/：{runtime}")
 
-    # 使用说明一起放进产物，换机器/发给别人都不用再找
-    doc = os.path.join(HERE, "使用说明.md")
-    if os.path.exists(doc):
-        shutil.copy2(doc, os.path.join(os.path.dirname(exe), "使用说明.md"))
-        print(f"[doc] 使用说明.md → {os.path.dirname(exe)}")
+    # 使用说明与更新说明一起放进产物，换机器/发给别人都不用再找
+    for name in ("使用说明.md", "更新说明.txt"):
+        doc = os.path.join(HERE, name)
+        if os.path.exists(doc):
+            shutil.copy2(doc, os.path.join(os.path.dirname(exe), name))
+            print(f"[doc] {name} → {os.path.dirname(exe)}")
 
     # 裁掉可选 CUDA 库，能省约 0.47 GB
     internal = os.path.join(os.path.dirname(exe), "_internal")
