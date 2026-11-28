@@ -573,6 +573,7 @@ class Engine:
                 out.update(ev=ev_final, ev_raw=ev["ev_raw"], ev_bias=bias,
                            L_in=me["L_in"], L_box=me["L_box"],
                            occ=me["occ"], saturated=bool(ev["saturated"]))
+                ev["ev"] = ev_final      # 写 XMP 用的是这个字典，别只改 out
             else:
                 out["note"] = "亮度测量失败，只写裁切"
 

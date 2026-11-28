@@ -173,7 +173,7 @@ TEXT = {
                  "二是管理头部位置的修正记忆。",
         "head_group": "头部修正学习（不动模型权重）",
         "head_off": "已累计 {n} 条 · 满 3 条开始生效",
-        "head_knn": "已累计 {n} 条 · 6 近邻补偿（平均 {dx:+.3f} / {dy:+.3f} 体宽）",
+        "head_knn": "已累计 {n} 条 · 6 近邻补偿（平均 {dx:+.3f} / {dy:+.3f} 体宽）· 满 25 条改用线性模型",
         "head_linear": "已累计 {n} 条 · 7 参数线性残差（残差 {r:.3f} 体宽）",
         "head_refit": "重拟合", "head_csv": "导出 CSV", "head_clear": "清空记录",
         "head_note": "处理或微调时，把队列里的照片点开，拖红点到正确位置，点「完成」就记一条。\n"
@@ -1137,13 +1137,12 @@ class MainWindow(QMainWindow):
 
         self.sp_evb = QDoubleSpinBox()
         self.sp_evb.setRange(-2.0, 2.0)
-        self.sp_evb.setSingleStep(0.1)
-        self.sp_evb.setDecimals(1)
+        self.sp_evb.setSingleStep(1 / 3)      # 跟 Lightroom 一样按 1/3 档
+        self.sp_evb.setDecimals(2)
         self.sp_evb.setSuffix(" EV")
         self.sp_evb.setValue(float(self.cfg.get("ev_bias") or 0.0))
         self.sp_evb.setToolTip(self._t("ev_bias_tip"))
-        self.sp_evb.valueChanged.connect(
-            lambda v: self.cfg.update(ev_bias=round(float(v), 2)))
+        self.sp_evb.valueChanged.connect(self._evb_changed)
         self.sp_evb.setMinimumWidth(96)
         g4 = group(self._t("ev_bias"), self.sp_evb)
         h.addLayout(g4)
@@ -2511,6 +2510,17 @@ class MainWindow(QMainWindow):
         if on:
             self._preview_pin = None      # 恢复跟随：不再定格在手动点的那张
             self._last_preview = None
+
+    def _evb_changed(self, v):
+        """吸附到 1/3 档：… −0.67 / −0.33 / 0 / +0.33 / +0.67 / +1.00 …"""
+        snapped = round(round(float(v) / (1 / 3)) * (1 / 3), 2)
+        if abs(snapped) < 1e-9:
+            snapped = 0.0
+        if abs(snapped - float(v)) > 1e-6:
+            self.sp_evb.blockSignals(True)
+            self.sp_evb.setValue(snapped)
+            self.sp_evb.blockSignals(False)
+        self.cfg.update(ev_bias=snapped)
 
     def _ratio_changed(self):
         keys = ["source", "1:1", "4:5", "3:2", "16:9", "custom"]
