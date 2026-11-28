@@ -87,6 +87,14 @@ def make_handler(app):
                 return _json(self, _browse(q.get("path", [""])[0]))
             if p == "/api/train/status":
                 return _json(self, trainer.status())
+            if p == "/api/logs":
+                # 只读：data/perf.log 的最后 N 行（默认 200）
+                n = max(1, min(2000, int(q.get("tail", ["200"])[0])))
+                return _json(self, {"lines": _tail_log(n)})
+            if p == "/api/errors":
+                # 只读：本次运行失败的那些，带路径与异常
+                return _json(self, {"errors": [r for r in engine.results
+                                               if isinstance(r, dict) and r.get("error")]})
             if p == "/api/ai":
                 return _json(self, _ai_manifest())
             return _json(self, {"error": "not found"}, 404)
@@ -139,6 +147,17 @@ def make_handler(app):
 def threading_shutdown(server):
     import threading
     threading.Thread(target=server.shutdown, daemon=True).start()
+
+
+def _tail_log(n: int = 200):
+    """读 data/perf.log 尾部，最多 n 行；文件不在就返回空。"""
+    path = os.path.join(DATA, "perf.log")
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+        return [ln.rstrip("\n") for ln in lines[-n:]]
+    except OSError:
+        return []
 
 
 def _browse(path: str):

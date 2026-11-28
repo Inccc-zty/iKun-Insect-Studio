@@ -109,11 +109,20 @@ def compute_crop(core, full, head=None, multi: bool = False, J: dict = None,
     # 固定比例时，宽高互相牵制：必须同时满足「装下全身框」的两个方向，
     # 否则选 16:9 遇到瘦高个会把腿切掉（旧实现只给宽加了 need）。
     if r <= 0:
+        # 基准：模型给出的框（归一化方形 = 原片比例）
         w = h = max(w, need_w, need_h, 0.05)
     else:
-        k = r / src_aspect                      # w = h * k
-        h = max(need_h, need_w / k, w / k, 0.05)   # 同时满足两条腿留白与模型预测的宽
-        w = h * k
+        # 换比例时**保持像素面积不变**（以原片比例那次的框为基准）：
+        #   基准面积 A0 = w·h·aspect（以 H² 为单位）
+        #   目标比例 R（像素宽/高）：dx = √(A0·R)/aspect，dy = dx·aspect/R
+        # 这样 3:2 换 1:1 时虫子占比基本不变，而不是简单裁一刀。
+        A0 = max(w, 0.05) ** 2 * src_aspect      # 基准框在归一化里是正方形
+        w = math.sqrt(A0 * r) / src_aspect
+        h = w * src_aspect / r
+        # 腿留白优先：面积不够就等比放大（比例不变，面积变大）
+        k = max(1.0, need_w / max(w, 1e-9), need_h / max(h, 1e-9))
+        w *= k
+        h *= k
 
     limited = False
     ratio_cut = False

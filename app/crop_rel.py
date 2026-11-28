@@ -135,20 +135,24 @@ def compute_crop(core, full, head=None, multi=False, J=None, aspect=1.0, ratio=0
     t0, t1 = min(t0, 3.5), min(t1, 3.5)          # 最多放大 11 倍，防止外推出天际
     W = min(cw * (2 ** t0), 1.0)
     H = min(ch * (2 ** t1), 1.0)
+
+    # 默认（ratio<=0）一律取**照片自身的比例**：成片训练时学的 t1 只用来定"多大"，
+    # 不用来定"什么比例"，否则换一批成片，默认比例就跟着漂。
+    pad = 0.03
+    need_w = min(1.0, max(full[2] - full[0], 0.0) + 2 * pad)
+    need_h = min(1.0, max(full[3] - full[1], 0.0) + 2 * pad)
+    H = min(W, 1.0)          # 原片比例 = 归一化正方形（H_norm == W_norm）
     if ratio and ratio > 0:
-        # 固定像素比例：由宽度推出高度，并保证「装下全身框」——不然瘦高个会切腿
-        pad = 0.03
-        need_w = min(1.0, max(full[2] - full[0], 0.0) + 2 * pad)
-        need_h = min(1.0, max(full[3] - full[1], 0.0) + 2 * pad)
+        # 与 crop_v3 同一套规则：保持像素面积，比例精确；装不下就先长大，最后才放宽比例
+        A0 = max(W, 0.05) ** 2 * aspect
+        W = math.sqrt(A0 * ratio) / aspect
         H = W * aspect / ratio
-        if H < need_h or W < need_w:
-            H = max(H, need_h, need_w * aspect / ratio)
-            W = H * ratio / aspect
-            if W > 1.0 or H > 1.0:              # 画布装不下就整体缩，比例不破
-                k = min(1.0 / W, 1.0 / H)
-                W, H = W * k, H * k
-        H = min(H, 1.0)
-        W = min(W, 1.0)
+        k = max(1.0, need_w / max(W, 1e-9), need_h / max(H, 1e-9))
+        W *= k
+        H *= k
+        if W > 1.0 or H > 1.0:
+            f = min(1.0 / W, 1.0 / H)
+            W, H = W * f, H * f
     cx = ccx - ox * W      # ox = 虫心在成片中的偏移；反解时符号相反
     cy = ccy - oy * H
     box = [cx - W / 2, cy - H / 2, cx + W / 2, cy + H / 2]
@@ -173,8 +177,13 @@ def _enforce(box, full, pad):
     W, H = max(x1 - x0, 0.02), max(y1 - y0, 0.02)
     need_l, need_t = full[0] - pad, full[1] - pad
     need_r, need_b = full[2] + pad, full[3] + pad
-    W = max(W, need_r - need_l, 0.05)
-    H = max(H, need_b - need_t, 0.05)
+    # 放大时**等比放大**，否则装下全身框这一步会把比例改掉
+    need_w, need_h = need_r - need_l, need_b - need_t
+    k = max(1.0, need_w / W, need_h / H, 0.05 / max(W, H))
+    W, H = W * k, H * k
+    if W > 1.0 or H > 1.0:
+        f = min(1.0 / W, 1.0 / H)
+        W, H = W * f, H * f
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     x0, x1 = cx - W / 2, cx + W / 2
     if x0 > need_l:
