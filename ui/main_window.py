@@ -56,8 +56,8 @@ TEXT = {
     "zh": {
         "subtitle": "昆虫自动化后期",
         "mode": "模式", "precision": "精度", "device": "设备",
-        "modes": ["裁切 + 曝光", "只裁切", "只曝光"],
-        "segs": ["掩膜 768", "掩膜 512", "掩膜 384（小显存）"],
+        "modes": ["裁切 + 曝光", "只裁切", "只调曝光"],
+        "segs": ["掩膜 768", "掩膜 512", "掩膜 384"],
         "start": "开始处理", "pause": "暂停", "resume": "继续",
         "to_light": "浅色", "to_dark": "深色",
         "lang": "EN", "lang_tip": "切换英文",
@@ -212,7 +212,7 @@ TEXT = {
         "subtitle": "Automatic Insect Post-processing",
         "mode": "Mode", "precision": "Precision", "device": "Device",
         "modes": ["Crop + Exposure", "Crop only", "Exposure only"],
-        "segs": ["Mask 768", "Mask 512", "Mask 384 (low VRAM)"],
+        "segs": ["Mask 768", "Mask 512", "Mask 384"],
         "start": "Start", "pause": "Pause", "resume": "Resume",
         "to_light": "Light", "to_dark": "Dark",
         "lang": "中文", "lang_tip": "Switch to Chinese",
@@ -675,7 +675,7 @@ class Preview(QWidget):
         self._drag = None
         self._active = None
         self._dirty = False
-        self.setMinimumSize(420, 280)
+        self.setMinimumSize(980, 620)
         self.setObjectName("preview")
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.StrongFocus)
@@ -1109,13 +1109,19 @@ class MainWindow(QMainWindow):
             box._label = lb
             return box
 
+        # 参数区用网格：一行放不下就折到第二行，窄窗口也不会把控件切掉
+        self._pg = pg = QGridLayout()
+        pg.setHorizontalSpacing(14)
+        pg.setVerticalSpacing(6)
+        h.addLayout(pg)
+
         self.cb_mode = QComboBox()
         self.cb_mode.addItems(self._t("modes"))
         self.cb_mode.setCurrentIndex(["both", "crop", "exposure"].index(
             self.cfg.get("mode") if self.cfg.get("mode") in ("both", "crop", "exposure") else "both"))
         self.cb_mode.currentIndexChanged.connect(self._cfg_changed)
         g1 = group(self._t("mode"), self.cb_mode)
-        h.addLayout(g1)
+        pg.addLayout(g1, 0, 0)
 
         self.cb_seg = QComboBox()
         self.cb_seg.addItems(self._t("segs"))
@@ -1123,7 +1129,7 @@ class MainWindow(QMainWindow):
         self.cb_seg.setCurrentIndex({768: 0, 512: 1, 384: 2}.get(_seg, 0))
         self.cb_seg.currentIndexChanged.connect(self._cfg_changed)
         g2 = group(self._t("precision"), self.cb_seg)
-        h.addLayout(g2)
+        pg.addLayout(g2, 0, 1)
 
         self.cb_ratio = ArrowCombo()
         self.cb_ratio.addItems(self._t("ratios"))
@@ -1133,26 +1139,26 @@ class MainWindow(QMainWindow):
         self.cb_ratio.setToolTip(self._t("ratio_tip"))
         self.cb_ratio.currentIndexChanged.connect(self._ratio_changed)
         g_r = group(self._t("ratio"), self.cb_ratio)
-        h.addLayout(g_r)
+        pg.addLayout(g_r, 0, 2)
 
         self.sp_evb = QDoubleSpinBox()
         self.sp_evb.setRange(-2.0, 2.0)
         self.sp_evb.setSingleStep(1 / 3)      # 跟 Lightroom 一样按 1/3 档
-        self.sp_evb.setDecimals(2)
+        self.sp_evb.setDecimals(1)
         self.sp_evb.setSuffix(" EV")
         self.sp_evb.setValue(float(self.cfg.get("ev_bias") or 0.0))
         self.sp_evb.setToolTip(self._t("ev_bias_tip"))
         self.sp_evb.valueChanged.connect(self._evb_changed)
         self.sp_evb.setMinimumWidth(96)
         g4 = group(self._t("ev_bias"), self.sp_evb)
-        h.addLayout(g4)
+        pg.addLayout(g4, 1, 0)
 
         self.cb_dev = QComboBox()
         self.cb_dev.addItems(["CUDA", "CPU"])
         self.cb_dev.setCurrentIndex(0 if self.cfg.get("device") == "cuda" else 1)
         self.cb_dev.currentIndexChanged.connect(self._cfg_changed)
         g3 = group(self._t("device"), self.cb_dev)
-        h.addLayout(g3)
+        pg.addLayout(g3, 1, 1)
 
         self.cb_mode.setMinimumWidth(132)
         self.cb_seg.setMinimumWidth(100)
