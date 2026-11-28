@@ -27,6 +27,7 @@ from PySide6.QtGui import (QPixmap, QFont, QColor, QImage, QIcon, QPainter,
                            QPen, QRegion)
 from PySide6.QtWidgets import (
     QInputDialog,
+    QDoubleSpinBox,
     QSizePolicy, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QComboBox, QListWidget, QListWidgetItem, QProgressBar, QSplitter,
     QTabWidget, QLineEdit, QFileDialog, QMessageBox, QGroupBox, QGridLayout, QScrollArea,
@@ -124,6 +125,8 @@ TEXT = {
         "model_import_bad": "导入失败：{e}",
         "train_group": "从「原片 + 同名 XMP」重拟合",
         "train_ph": "选多少个目录都行，会各自递归扫描",
+        "ev_bias": "曝光补偿",
+        "ev_bias_tip": "在你现有曝光模型的结果上加减，不重新训练。正数更亮，负数更暗；对之后处理的照片生效，重跑该张即生效。",
         "ratio": "裁切比例",
         "ratios": ["原图比例", "1:1", "4:5", "3:2", "16:9", "自定义"],
         "ratio_tip": "裁切框的像素宽高比。原图比例 = 老行为（3:2 进 3:2 出）。自定义格式：宽:高，例如 5:4",
@@ -278,6 +281,8 @@ TEXT = {
         "model_import_bad": "Import failed: {e}",
         "train_group": "Refit from RAW + sidecar XMP",
         "train_ph": "Pick one or more folders; each is scanned recursively",
+        "ev_bias": "EV bias",
+        "ev_bias_tip": "Added to the exposure model's result — no retraining. Positive is brighter; applies to the next photos, re-run a photo to see it.",
         "ratio": "Aspect",
         "ratios": ["Source", "1:1", "4:5", "3:2", "16:9", "Custom"],
         "ratio_tip": "Pixel aspect ratio of the crop box. Source = previous behaviour (3:2 in, 3:2 out). Custom: W:H, e.g. 5:4",
@@ -1130,6 +1135,19 @@ class MainWindow(QMainWindow):
         g_r = group(self._t("ratio"), self.cb_ratio)
         h.addLayout(g_r)
 
+        self.sp_evb = QDoubleSpinBox()
+        self.sp_evb.setRange(-2.0, 2.0)
+        self.sp_evb.setSingleStep(0.1)
+        self.sp_evb.setDecimals(1)
+        self.sp_evb.setSuffix(" EV")
+        self.sp_evb.setValue(float(self.cfg.get("ev_bias") or 0.0))
+        self.sp_evb.setToolTip(self._t("ev_bias_tip"))
+        self.sp_evb.valueChanged.connect(
+            lambda v: self.cfg.update(ev_bias=round(float(v), 2)))
+        self.sp_evb.setMinimumWidth(96)
+        g4 = group(self._t("ev_bias"), self.sp_evb)
+        h.addLayout(g4)
+
         self.cb_dev = QComboBox()
         self.cb_dev.addItems(["CUDA", "CPU"])
         self.cb_dev.setCurrentIndex(0 if self.cfg.get("device") == "cuda" else 1)
@@ -1141,7 +1159,8 @@ class MainWindow(QMainWindow):
         self.cb_seg.setMinimumWidth(100)
         self.cb_dev.setMinimumWidth(88)
         self.cb_ratio.setMinimumWidth(104)
-        self._top_groups = [(g1, "mode"), (g2, "precision"), (g_r, "ratio"), (g3, "device")]
+        self._top_groups = [(g1, "mode"), (g2, "precision"), (g_r, "ratio"),
+                            (g4, "ev_bias"), (g3, "device")]
 
         h.addStretch(1)
         self.b_lang = _mini(QPushButton(self._t("lang")), 12)
@@ -1965,6 +1984,7 @@ class MainWindow(QMainWindow):
         self.cb_ratio.addItems(self._t("ratios"))
         self.cb_ratio.setCurrentIndex(min(_idx, self.cb_ratio.count() - 1))
         self.cb_ratio.setToolTip(self._t("ratio_tip"))
+        self.sp_evb.setToolTip(self._t("ev_bias_tip"))
         self.cb_ratio.blockSignals(False)
 
         self.b_lang.setText(self._t("lang"))

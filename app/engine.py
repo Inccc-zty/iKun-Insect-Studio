@@ -567,7 +567,10 @@ class Engine:
             me = exposure_model.measure_pil(prev, res["mask"], full)
             if me["L_in"] is not None and me["L_box"] is not None:
                 ev = exposure_model.predict(me["L_in"], me["L_box"])
-                out.update(ev=ev["ev"], ev_raw=ev["ev_raw"],
+                # 用户补偿：叠加在模型输出上，不改模型本身；越界夹到 ±5 EV
+                bias = float(cfg.get("ev_bias") or 0.0)
+                ev_final = max(-5.0, min(5.0, float(ev["ev"]) + bias))
+                out.update(ev=ev_final, ev_raw=ev["ev_raw"], ev_bias=bias,
                            L_in=me["L_in"], L_box=me["L_box"],
                            occ=me["occ"], saturated=bool(ev["saturated"]))
             else:

@@ -13,6 +13,7 @@ DEFAULTS = {
     "mode": "both",           # both | crop | exposure
     "crop_ratio": "source",   # source | 1:1 | 4:5 | 3:2 | 16:9 | custom
     "crop_ratio_custom": "",
+    "ev_bias": 0.0,          # 曝光补偿（EV），用户微调，叠加在本模型输出上
     "seg_size": 768,          # 512 省显存
     "device": "cuda",         # cuda | cpu
     "coef": "",               # 裁切系数：空 = 内置 105 项；否则填 data/models/crop/*.json

@@ -16,6 +16,8 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+HF_SRC = os.environ.get("INSECT_HF") or r"D:/反渲染的研究/.cache/hf"
+HF_MODEL = "models--ZhengPeng7--BiRefNet"     # 只带这一个，别把整个缓存塞进包
 SKILL_SRC = os.environ.get("INSECT_SKILL") or r"O:/ai修图/skill/insect-auto-post-v2"
 STAGE = os.environ.get("INSECT_STAGE") or os.path.join(HERE, "build_assets")
 DIST = os.environ.get("INSECT_DIST") or os.path.join(HERE, "dist_final")
@@ -128,6 +130,22 @@ def main():
         print(f"[icon] 生成默认图标 {ico}")
     stage_skill()
 
+    hf_arg = []
+    hf_dst = os.path.join(STAGE, "hf")
+    src_model = os.path.join(HF_SRC, "hub", HF_MODEL)
+    dst_model = os.path.join(hf_dst, "hub", HF_MODEL)
+    if os.path.isdir(src_model):
+        if not os.path.isdir(dst_model):
+            print(f"[stage] 自带模型 → {dst_model}")
+            shutil.copytree(src_model, dst_model,
+                            ignore=shutil.ignore_patterns("*.lock", "*.tmp", "*.incomplete"))
+        hf_arg = ["--add-data", f"{hf_dst}{os.pathsep}hf"]
+        mb = sum(os.path.getsize(os.path.join(dp, f))
+                 for dp, _dn, fn in os.walk(dst_model) for f in fn) / 1024 ** 2
+        print(f"[stage] 模型 {mb:.0f} MB 已入包")
+    else:
+        print("[stage] 没找到 BiRefNet 缓存，包内不带模型（用户首次运行需联网下载 848 MB）")
+
     args = [
         sys.executable, "-m", "PyInstaller",
         "--noconfirm",
@@ -149,6 +167,7 @@ def main():
         "--hidden-import", "PySide6.QtCore",
         "--collect-submodules", "rawpy",
         "--add-data", f"{os.path.join(HERE, 'assets')}{os.pathsep}assets",
+        *hf_arg,
         "--exclude-module", "matplotlib",
         "--exclude-module", "tkinter",
         "--exclude-module", "tkinter",
@@ -171,6 +190,13 @@ def main():
     exe = os.path.join(DIST, APP_NAME, f"{APP_NAME}.exe")
     if not os.path.exists(exe):
         raise SystemExit(f"没找到 {exe}")
+
+    # 运行期状态不能进发布包：否则用户「整包解压覆盖」时，他们的
+    # config.json、训练好的模型（data/models/crop/*.json）会被一起盖掉。
+    runtime = os.path.join(os.path.dirname(exe), "data")
+    if os.path.isdir(runtime):
+        shutil.rmtree(runtime, ignore_errors=True)
+        print(f"[clean] 已移除运行期 data/：{runtime}")
 
     # 使用说明一起放进产物，换机器/发给别人都不用再找
     doc = os.path.join(HERE, "使用说明.md")
