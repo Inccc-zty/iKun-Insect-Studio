@@ -266,7 +266,7 @@ class Trainer:
     def _extract_relative(self, entries, subdir):
         """只用成品 JPG：在成片自己身上量「虫体占画面多少、偏在哪」，
         拟合成「虫体 → 成片」的相对关系，推理时反解裁切框。不需要原图、不需要 XMP。"""
-        files, groups = [], {}
+        files, groups, seen = [], {}, set()
         for ent in entries:
             root, selected = ent["dir"], ent["files"]
             fs = selected or rawio.scan_image_dir(root, self.cfg.get("recursive"))
@@ -274,8 +274,10 @@ class Trainer:
             self._say(f"{os.path.basename(root)}：{len(fs)} 张成品 JPG")
             for p in fs:
                 # 同一个主干（目录+文件名，忽略扩展名）只收一次，避免同名副本被当成两张
-                if _cache_key(os.path.splitext(p)[0]) in {_cache_key(os.path.splitext(f)[0]) for f in files}:
+                k = _cache_key(os.path.splitext(p)[0])
+                if k in seen:
                     continue
+                seen.add(k)
                 files.append(p); groups[p] = _cache_key(os.path.dirname(p))
         if len(files) < 50:
             raise RuntimeError(f"成品 JPG 只有 {len(files)} 张，至少 50 张才能拟合 / "
